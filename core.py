@@ -4,7 +4,7 @@ import random
 import uuid
 import time
 import numpy as np
-import scipy as stats
+from scipy import stats
 import math
 
 
@@ -49,11 +49,10 @@ def route_request(X, probability_split):
 
 # function to record the delayed outcome
 def record_delayed_outcome(request_id, outcome):
-
-    if request_id in requests:
-        outcomes[request_id] = outcome
-    else:
+    if request_id not in requests:
         raise ValueError("Request ID not found")
+
+    outcomes[request_id] = outcome
 
 
 
@@ -109,10 +108,10 @@ def compile_evidence():
     mean_A, mean_B, delta, (lower, upper), n_A, n_B = stats_result
 
     evidence = {
-        "Model A Mean Outcome": mean_A,
-        "Model B Mean Outcome": mean_B,
-        "Difference in Means (B - A)": delta,
-        "95% Confidence Interval": (lower, upper),
+        "Model A Mean Outcome": round(mean_A, 4),
+        "Model B Mean Outcome": round(mean_B, 4),
+        "Difference in Means (B - A)": round(delta, 4),
+        "95% Confidence Interval": (round(lower, 4), round(upper, 4)),
         "Number of Outcomes for Model A": n_A,
         "Number of Outcomes for Model B": n_B
     }

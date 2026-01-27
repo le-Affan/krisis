@@ -1,7 +1,11 @@
+# venv\Scripts\activate
+
 import random
 import uuid
 import time
 import numpy as np
+import scipy as stats
+import math
 
 
 # In-Memory state
@@ -52,8 +56,9 @@ def record_delayed_outcome(request_id, outcome):
         raise ValueError("Request ID not found")
 
 
-# function to calculate per model statistics
-def calculate_model_statistics():
+
+# function to compute confidence interval using per model statistics
+def compute_confidence_interval():
     outcomes_A = []
     outcomes_B = []
 
@@ -63,9 +68,33 @@ def calculate_model_statistics():
             outcomes_A.append(outcome)
         elif model_used == "B":
             outcomes_B.append(outcome)
-    
-    mean_A = np.mean(outcomes_A) if outcomes_A else None
-    mean_B = np.mean(outcomes_B) if outcomes_B else None
-    delta = (mean_B - mean_A) if (mean_A is not None and mean_B is not None) else None
 
-    return {"A": mean_A, "B": mean_B, "delta": delta}
+    if len(outcomes_A) < 2 or len(outcomes_B) < 2: # ensures enough data for variance calculation
+        return None
+
+    mean_A = np.mean(outcomes_A)
+    mean_B = np.mean(outcomes_B)
+
+    var_A = np.var(outcomes_A, ddof=1)
+    var_B = np.var(outcomes_B, ddof=1)
+
+    n_A = len(outcomes_A)
+    n_B = len(outcomes_B)
+
+    # Standard error (Welch)
+    se = math.sqrt(var_A / n_A + var_B / n_B)
+
+    # Degrees of freedom (Welch–Satterthwaite)
+    df = (var_A / n_A + var_B / n_B) ** 2 / (
+        (var_A**2) / (n_A**2 * (n_A - 1)) +
+        (var_B**2) / (n_B**2 * (n_B - 1))
+    )
+
+    # 95% CI
+    t_crit = stats.t.ppf(0.975, df)
+    delta = mean_B - mean_A
+
+    lower = delta - t_crit * se
+    upper = delta + t_crit * se
+
+    return (lower, upper)

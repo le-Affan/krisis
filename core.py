@@ -57,8 +57,8 @@ def record_delayed_outcome(request_id, outcome):
 
 
 
-# function to compute confidence interval using per model statistics
-def compute_confidence_interval():
+# function to compute statistics
+def compute_statistics():
     outcomes_A = []
     outcomes_B = []
 
@@ -97,4 +97,24 @@ def compute_confidence_interval():
     lower = delta - t_crit * se
     upper = delta + t_crit * se
 
-    return (lower, upper)
+    return [mean_A, mean_B, delta, (lower, upper), n_A, n_B]
+
+
+# function to compile all evidence
+def compile_evidence():
+    stats_result = compute_statistics()
+    if stats_result is None:
+        return "Not enough data to compute statistics."
+
+    mean_A, mean_B, delta, (lower, upper), n_A, n_B = stats_result
+
+    evidence = {
+        "Model A Mean Outcome": mean_A,
+        "Model B Mean Outcome": mean_B,
+        "Difference in Means (B - A)": delta,
+        "95% Confidence Interval": (lower, upper),
+        "Number of Outcomes for Model A": n_A,
+        "Number of Outcomes for Model B": n_B
+    }
+
+    return evidence

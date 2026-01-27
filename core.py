@@ -1,6 +1,7 @@
 import random
 import uuid
 import time
+import numpy as np
 
 
 # In-Memory state
@@ -15,7 +16,7 @@ def register_models(model_a, model_b):
     models["B"] = model_b
 
 
-#  request routing function
+# request routing function
 def route_request(X, probability_split):
 
     # Generate a unique request ID and timestamp
@@ -42,10 +43,29 @@ def route_request(X, probability_split):
     return prediction, request_id
 
 
-# delayed outcome recording function
+# function to record the delayed outcome
 def record_delayed_outcome(request_id, outcome):
 
     if request_id in requests:
         outcomes[request_id] = outcome
     else:
         raise ValueError("Request ID not found")
+
+
+# function to calculate per model statistics
+def calculate_model_statistics():
+    outcomes_A = []
+    outcomes_B = []
+
+    for request_id, outcome in outcomes.items():
+        model_used = requests[request_id]["model"]
+        if model_used == "A":
+            outcomes_A.append(outcome)
+        elif model_used == "B":
+            outcomes_B.append(outcome)
+    
+    mean_A = np.mean(outcomes_A) if outcomes_A else None
+    mean_B = np.mean(outcomes_B) if outcomes_B else None
+    delta = (mean_B - mean_A) if (mean_A is not None and mean_B is not None) else None
+
+    return {"A": mean_A, "B": mean_B, "delta": delta}

@@ -44,14 +44,3 @@ Output:
 'Number of Outcomes for Model B': 43
 }
 '''
-
-'''
-{
-Test 1: Known difference detection output
-'Model A Mean Outcome': np.float64(0.5),
-'Model B Mean Outcome': np.float64(0.7),
-'Difference in Means (B - A)': np.float64(0.2),
-'95% Confidence Interval': (np.float64(0.2), np.float64(0.2)),
-'Number of Outcomes for Model A': 100, 'Number of Outcomes for Model B': 100
-}
-'''

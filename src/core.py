@@ -55,53 +55,16 @@ def record_delayed_outcome(request_id, outcome):
     outcomes[request_id] = outcome
 
 
-
 # function to compute statistics
-def compute_statistics():
-    outcomes_A = []
-    outcomes_B = []
+outcomes_A = [0.5] * 100
+outcomes_B = [0.7] * 100
 
-    for request_id, outcome in outcomes.items():
-        model_used = requests[request_id]["model"]
-        if model_used == "A":
-            outcomes_A.append(outcome)
-        elif model_used == "B":
-            outcomes_B.append(outcome)
-
-    if len(outcomes_A) < 2 or len(outcomes_B) < 2: # ensures enough data for variance calculation
-        return None
-
-    mean_A = np.mean(outcomes_A)
-    mean_B = np.mean(outcomes_B)
-
-    var_A = np.var(outcomes_A, ddof=1)
-    var_B = np.var(outcomes_B, ddof=1)
-
-    n_A = len(outcomes_A)
-    n_B = len(outcomes_B)
-
-    # Standard error (Welch)
-    se = math.sqrt(var_A / n_A + var_B / n_B)
-
-    # Degrees of freedom (Welch–Satterthwaite)
-    df = (var_A / n_A + var_B / n_B) ** 2 / (
-        (var_A**2) / (n_A**2 * (n_A - 1)) +
-        (var_B**2) / (n_B**2 * (n_B - 1))
-    )
-
-    # 95% CI
-    t_crit = stats.t.ppf(0.975, df)
-    delta = mean_B - mean_A
-
-    lower = delta - t_crit * se
-    upper = delta + t_crit * se
-
-    return [mean_A, mean_B, delta, (lower, upper), n_A, n_B]
+from src.statistics import compute_statistics
 
 
 # function to compile all evidence
 def compile_evidence():
-    stats_result = compute_statistics()
+    stats_result = compute_statistics(outcomes_A, outcomes_B)
     if stats_result is None:
         return "Not enough data to compute statistics."
 

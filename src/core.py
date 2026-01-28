@@ -55,10 +55,6 @@ def record_delayed_outcome(request_id, outcome):
     outcomes[request_id] = outcome
 
 
-# function to compute statistics
-outcomes_A = [0.5] * 100
-outcomes_B = [0.7] * 100
-
 from src.statistics import compute_statistics
 
 

@@ -4,7 +4,7 @@ def dummyA(X_A):
 def dummyB(X_B):
     return X_B * 2
 
-from core import (
+from src.core import (
     register_models,
     route_request,
     record_delayed_outcome,

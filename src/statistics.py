@@ -12,21 +12,31 @@ def compute_statistics(outcomes_1, outcomes_2):
 
     var_A = np.var(outcomes_1, ddof=1)
     var_B = np.var(outcomes_2, ddof=1)
+
     n_A = len(outcomes_1)
     n_B = len(outcomes_2)
 
+    delta = mean_B - mean_A
+
+
+    # Both groups have zero variance; return delta as 0 and CI as (0,0)
+    if var_A == 0 and var_B == 0:
+        return [mean_A, mean_B, delta, (0.0, 0.0), n_A, n_B] 
+
+
     # Standard error (Welch)
     se = math.sqrt(var_A / n_A + var_B / n_B)
+
 
     # Degrees of freedom (Welch–Satterthwaite)
     df = (var_A / n_A + var_B / n_B) ** 2 / (
         (var_A**2) / (n_A**2 * (n_A - 1)) +
         (var_B**2) / (n_B**2 * (n_B - 1))
     )
+      
 
     # 95% CI
     t_crit = stats.t.ppf(0.975, df)
-    delta = mean_B - mean_A
 
     lower = delta - t_crit * se
     upper = delta + t_crit * se

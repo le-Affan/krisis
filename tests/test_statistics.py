@@ -40,3 +40,16 @@ def test_identical_models():
 
     # confidence interval should include zero
     assert lower <= 0 <= upper
+
+
+# Test 3: Minimum sample size warning
+
+def test_minimum_sample_size_warning():
+    arr1 = [0.5]
+    arr2 = [0.7]
+
+    from src.statistics import compute_statistics
+    results = compute_statistics(arr1, arr2)
+
+    # should return None due to insufficient data
+    assert results is None

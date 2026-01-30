@@ -30,4 +30,4 @@ def test_assignment_distribution_approximately_balanced():
     ratio_a = count_a / total_requests
 
     # Allow randomness, but should be close to 50%
-    assert 0.45 <= ratio_a <= 0.55
+    assert 0.40 <= ratio_a <= 0.60

@@ -60,6 +60,14 @@ from src.statistics import compute_statistics
 
 # function to compile all evidence
 def compile_evidence():
+    outcomes_A = []
+    outcomes_B = []
+    for req_id, outcome in outcomes.items():
+        model_used = requests[req_id]["model"]
+        if model_used == "A":
+            outcomes_A.append(outcome)
+        else:
+            outcomes_B.append(outcome)
     stats_result = compute_statistics(outcomes_A, outcomes_B)
     if stats_result is None:
         return "Not enough data to compute statistics."

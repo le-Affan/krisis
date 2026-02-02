@@ -130,15 +130,24 @@ def compile_evidence():
     if stats_result is None:
         return "Not enough data to compute statistics."
 
-    mean_A, mean_B, delta, (lower, upper), n_A, n_B = stats_result
+    mean_A = stats_result["mean_A"]
+    mean_B = stats_result["mean_B"]
+    delta = stats_result["delta"]
+    ci_lower = stats_result["ci_lower"]
+    ci_upper = stats_result["ci_upper"]
+    n_A = stats_result["n_A"]
+    n_B = stats_result["n_B"]
+    effect_size = stats_result["effect_size"]
+
 
     evidence = {
         "Model A Mean Outcome": round(mean_A, 4),
         "Model B Mean Outcome": round(mean_B, 4),
         "Difference in Means (B - A)": round(delta, 4),
-        "95% Confidence Interval": (round(lower, 4), round(upper, 4)),
+        "95% Confidence Interval": (round(ci_lower, 4), round(ci_upper, 4)),
         "Number of Outcomes for Model A": n_A,
         "Number of Outcomes for Model B": n_B,
+        "Effect Size": round(effect_size, 4)
     }
 
     return evidence

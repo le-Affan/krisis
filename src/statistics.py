@@ -10,30 +10,28 @@ def check_minimum_sample_size(n_A,n_B,min_size):
     else: 
         return True
 
-def calculate_welch_test(outcomes_1,outcomes_2):
-    mean_A = np.mean(outcomes_1)
-    mean_B = np.mean(outcomes_2)
+def calculate_descriptive_statistics(outcomes):
+    mean = np.mean(outcomes)
+    var = np.var(outcomes, ddof=1)
+    std = np.std(outcomes, ddof=1)
+    n = len(outcomes)
+    return (mean, var, std, n)
 
-    var_A = np.var(outcomes_1, ddof=1)
-    var_B = np.var(outcomes_2, ddof=1)
-
-    n_A = len(outcomes_1)
-    n_B = len(outcomes_2)
-
+def calculate_welch_test(mean_A, mean_B, var_A, var_B, n_A, n_B):
     delta = mean_B - mean_A
 
     # Standard error (Welch)
     se = math.sqrt(var_A / n_A + var_B / n_B)
 
     if var_A == 0 and var_B == 0:
-        return [mean_A, mean_B, delta, 0.0, None, n_A, n_B]
+        return (delta, 0.0, None)
 
     # Degrees of freedom (Welch–Satterthwaite)
     df = (var_A / n_A + var_B / n_B) ** 2 / (
         (var_A**2) / (n_A**2 * (n_A - 1)) + (var_B**2) / (n_B**2 * (n_B - 1))
     )
 
-    return [mean_A, mean_B, delta, se, df, n_A, n_B]
+    return (delta, se, df)
 
 def calculate_confidence_interval(delta,se,df,confidence_level):
 
@@ -110,10 +108,22 @@ def compute_statistics(outcomes_1, outcomes_2):
     if not check_minimum_sample_size(len(outcomes_1), len(outcomes_2), 2):
         return None
 
-    mean_A, mean_B, delta, se, df, n_A, n_B = calculate_welch_test(
-        outcomes_1, outcomes_2
-        )
-    
+    mean_A,var_A,std_A,n_A = calculate_descriptive_statistics(outcomes_1)
+    mean_B,var_B,std_B,n_B = calculate_descriptive_statistics(outcomes_2)
+
+    delta, se, df = calculate_welch_test(mean_A, mean_B, var_A, var_B, n_A, n_B)
+
     ci_lower, ci_upper = calculate_confidence_interval(delta, se, df, 0.95)
 
-    return [mean_A, mean_B, delta, (ci_lower, ci_upper), n_A, n_B]
+    effect_size = calculate_effect_size(mean_A, mean_B, std_A, std_B, n_A, n_B)
+
+    return {
+        "mean_A": mean_A, 
+        "mean_B": mean_B, 
+        "delta": delta, 
+        "ci_lower": ci_lower, 
+        "ci_upper": ci_upper, 
+        "n_A": n_A, 
+        "n_B": n_B, 
+        "effect_size": effect_size
+        }

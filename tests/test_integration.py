@@ -46,6 +46,7 @@ def test_system_integrates_end_to_end():
         "95% Confidence Interval",
         "Number of Outcomes for Model A",
         "Number of Outcomes for Model B",
+        "Effect Size",
     ]
 
     for key in required_keys:

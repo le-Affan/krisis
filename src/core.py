@@ -99,24 +99,30 @@ def record_delayed_outcome(request_id, outcome):
 # function to compile all evidence
 def compile_evidence():
     """
-    Aggregate recorded outcomes and compute statistical evidence for the experiment.
+    Aggregate recorded outcomes and produce a human-readable summary of
+    statistical evidence for the A/B experiment.
 
     Returns:
     dict or str
-        Dictionary containing summary statistics and confidence interval if sufficient
-        data is available, otherwise a message indicating insufficient data.
+        A dictionary containing rounded summary statistics, confidence interval,
+        sample counts, and effect size if sufficient data is available.
+        Returns a string message if there are fewer than the minimum required
+        outcomes per variant.
 
     Behavior:
     - Groups recorded outcomes by model variant (A and B) using request metadata.
-    - Invokes compute_statistics to calculate means, difference in means, confidence
-      interval, and sample sizes.
-    - Formats results into a human-readable evidence dictionary.
-    - Returns a sentinel message if there are fewer than two outcomes per variant.
+    - Delegates all statistical computation to compute_statistics.
+    - Transforms raw statistical outputs into a presentation-friendly format
+      (rounding values and applying descriptive labels).
+
+    Notes:
+    - This function performs no statistical calculations itself.
+    - Intended as a presentation / reporting layer on top of compute_statistics.
 
     Assumptions:
-    - Each request has at most one associated outcome.
+    - Each request has at most one recorded outcome.
+    - Requests and outcomes stores are consistent and in sync.
     - Outcomes are numeric and comparable across variants.
-    - In-memory request and outcome stores are consistent.
     """
     outcomes_A = []
     outcomes_B = []

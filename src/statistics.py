@@ -48,6 +48,35 @@ def calculate_confidence_interval(delta,se,df,confidence_level):
 
     return (lower, upper)
 
+def calculate_effect_size(mean_A, mean_B, std_A, std_B, n_A, n_B):
+    """
+    Compute Cohen's d to measure effect size between two groups.
+
+    Parameters:
+    mean_A, mean_B : float
+        Sample means for variants A and B.
+    std_A, std_B : float
+        Sample standard deviations for variants A and B.
+    n_A, n_B : int
+        Sample sizes for variants A and B.
+
+    Returns:
+    float
+        Cohen's d effect size. Returns 0.0 if pooled standard deviation is zero.
+    """
+    # Pooled standard deviation
+    pooled_var = (
+        ((n_A - 1) * std_A**2 + (n_B - 1) * std_B**2) / (n_A + n_B - 2)
+    )
+
+    if pooled_var == 0:
+        return 0.0
+
+    pooled_std = math.sqrt(pooled_var)
+
+    return (mean_B - mean_A) / pooled_std
+
+
 def compute_statistics(outcomes_1, outcomes_2):
     """
     Compute a statistical comparison between two model variants using Welch's t-test.

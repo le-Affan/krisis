@@ -30,7 +30,7 @@ def test_system_integrates_end_to_end():
     # 4. Compile evidence
     evidence = compile_evidence()
 
-    # ---- Integration assertions (contracts only) ----
+    # ----Integration assertions----
 
     # System should return a result, not crash
     assert evidence is not None

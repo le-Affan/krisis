@@ -16,13 +16,44 @@ outcomes = {}
 
 # model registration function
 def register_models(model_a, model_b):
+    """
+    Register two model variants for A/B testing.
+
+    Parameters:
+    model_a : callable
+        Function or callable object representing variant A.
+    model_b : callable
+        Function or callable object representing variant B.
+
+    Behavior:
+    - Stores the models in in-memory state under keys "A" and "B".
+    - Overwrites any previously registered models.
+    """
     models["A"] = model_a
     models["B"] = model_b
 
 
 # request routing function
 def route_request(X, probability_split):
+    """
+    Route an incoming request to one of the registered model variants.
 
+    Parameters:
+    X : any
+        Input data passed to the selected model.
+    probability_split : float
+        Probability of routing the request to model A (between 0 and 1).
+
+    Returns:
+    tuple
+        (prediction, request_id) where prediction is the model output
+        and request_id uniquely identifies the routed request.
+
+    Behavior:
+    - Randomly assigns the request to model A or B based on probability_split.
+    - Stores request metadata (input, assigned model, timestamp) in memory.
+    - Does not guarantee deterministic assignment across calls.
+    """
     # Generate a unique request ID and timestamp
     request_id = str(uuid.uuid4())
     timestamp = time.time()
@@ -49,6 +80,23 @@ def route_request(X, probability_split):
 
 # function to record the delayed outcome
 def record_delayed_outcome(request_id, outcome):
+    """
+    Record the observed outcome for a previously routed request.
+
+    Parameters:
+    request_id : str
+        Unique identifier returned by route_request.
+    outcome : float
+        Observed outcome value associated with the request.
+
+    Raises:
+    ValueError
+        If the request_id does not exist in the request log.
+
+    Behavior:
+    - Links the outcome to the original request via request_id.
+    - Assumes a single outcome per request.
+    """
     if request_id not in requests:
         raise ValueError("Request ID not found")
 
@@ -57,9 +105,28 @@ def record_delayed_outcome(request_id, outcome):
 
 from src.statistics import compute_statistics
 
-
 # function to compile all evidence
 def compile_evidence():
+    """
+    Aggregate recorded outcomes and compute statistical evidence for the experiment.
+
+    Returns:
+    dict or str
+        Dictionary containing summary statistics and confidence interval if sufficient
+        data is available, otherwise a message indicating insufficient data.
+
+    Behavior:
+    - Groups recorded outcomes by model variant (A and B) using request metadata.
+    - Invokes compute_statistics to calculate means, difference in means, confidence
+      interval, and sample sizes.
+    - Formats results into a human-readable evidence dictionary.
+    - Returns a sentinel message if there are fewer than two outcomes per variant.
+
+    Assumptions:
+    - Each request has at most one associated outcome.
+    - Outcomes are numeric and comparable across variants.
+    - In-memory request and outcome stores are consistent.
+    """
     outcomes_A = []
     outcomes_B = []
     for req_id, outcome in outcomes.items():

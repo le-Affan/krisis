@@ -2,6 +2,7 @@ import numpy as np
 from scipy import stats
 import math
 
+
 def compute_statistics(outcomes_1, outcomes_2):
     """
     Compute a statistical comparison between two model variants using Welch's t-test.
@@ -32,7 +33,9 @@ def compute_statistics(outcomes_1, outcomes_2):
     - Outcomes are continuous and approximately normally distributed.
     - Samples are independent between variants.
     """
-    if len(outcomes_1) < 2 or len(outcomes_2) < 2: # ensures enough data for variance calculation
+    if (
+        len(outcomes_1) < 2 or len(outcomes_2) < 2
+    ):  # ensures enough data for variance calculation
         return None
 
     mean_A = np.mean(outcomes_1)
@@ -46,22 +49,17 @@ def compute_statistics(outcomes_1, outcomes_2):
 
     delta = mean_B - mean_A
 
-
     # Both groups have zero variance; return delta as 0 and CI as (0,0)
     if var_A == 0 and var_B == 0:
-        return [mean_A, mean_B, delta, (0.0, 0.0), n_A, n_B] 
-
+        return [mean_A, mean_B, delta, (0.0, 0.0), n_A, n_B]
 
     # Standard error (Welch)
     se = math.sqrt(var_A / n_A + var_B / n_B)
 
-
     # Degrees of freedom (Welch–Satterthwaite)
     df = (var_A / n_A + var_B / n_B) ** 2 / (
-        (var_A**2) / (n_A**2 * (n_A - 1)) +
-        (var_B**2) / (n_B**2 * (n_B - 1))
+        (var_A**2) / (n_A**2 * (n_A - 1)) + (var_B**2) / (n_B**2 * (n_B - 1))
     )
-      
 
     # 95% CI
     t_crit = stats.t.ppf(0.975, df)

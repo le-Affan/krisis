@@ -1,10 +1,12 @@
 # Test 1: Known difference detection
 
+
 def test_known_difference():
     arr1 = [0.5] * 100
     arr2 = [0.7] * 100
 
     from src.statistics import compute_statistics
+
     results = compute_statistics(arr1, arr2)
 
     mean_A, mean_B, delta, (lower, upper), n_A, n_B = results
@@ -21,6 +23,7 @@ def test_known_difference():
 
 # Test 2: No difference when models are identical
 
+
 def test_identical_models():
 
     # both models have same outcomes
@@ -28,6 +31,7 @@ def test_identical_models():
     arr2 = [0.6] * 100
 
     from src.statistics import compute_statistics
+
     results = compute_statistics(arr1, arr2)
 
     mean_A, mean_B, delta, (lower, upper), n_A, n_B = results
@@ -44,11 +48,13 @@ def test_identical_models():
 
 # Test 3: Minimum sample size warning
 
+
 def test_minimum_sample_size_warning():
     arr1 = [0.5]
     arr2 = [0.7]
 
     from src.statistics import compute_statistics
+
     results = compute_statistics(arr1, arr2)
 
     # should return None due to insufficient data

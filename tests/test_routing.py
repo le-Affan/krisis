@@ -2,6 +2,7 @@
 
 from src.core import register_models, route_request, requests
 
+
 def test_assignment_distribution_approximately_balanced():
     # dummy models
     def model_a(x):

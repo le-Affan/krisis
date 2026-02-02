@@ -3,10 +3,7 @@
 import random
 import uuid
 import time
-import numpy as np
-from scipy import stats
-import math
-
+from src.statistics import compute_statistics
 
 # In-Memory state
 models = {}
@@ -64,13 +61,9 @@ def route_request(X, probability_split):
         selected_model = "A"
     else:
         selected_model = "B"
-    
+
     # Store the request details
-    requests[request_id] = {
-        "input": X,
-        "model": selected_model,
-        "timestamp": timestamp
-    }
+    requests[request_id] = {"input": X, "model": selected_model, "timestamp": timestamp}
 
     # Get prediction from the selected model
     prediction = models[selected_model](X)
@@ -102,8 +95,6 @@ def record_delayed_outcome(request_id, outcome):
 
     outcomes[request_id] = outcome
 
-
-from src.statistics import compute_statistics
 
 # function to compile all evidence
 def compile_evidence():
@@ -147,7 +138,7 @@ def compile_evidence():
         "Difference in Means (B - A)": round(delta, 4),
         "95% Confidence Interval": (round(lower, 4), round(upper, 4)),
         "Number of Outcomes for Model A": n_A,
-        "Number of Outcomes for Model B": n_B
+        "Number of Outcomes for Model B": n_B,
     }
 
     return evidence

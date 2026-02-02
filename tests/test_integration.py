@@ -3,8 +3,8 @@ from src.core import (
     route_request,
     record_delayed_outcome,
     compile_evidence,
-    requests,
 )
+
 
 def test_system_integrates_end_to_end():
     # Dummy models

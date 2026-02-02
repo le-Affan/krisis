@@ -2,7 +2,8 @@ import numpy as np
 from scipy import stats
 import math
 
-def check_minimum_sample_size(n_A,n_B,min_size):
+
+def check_minimum_sample_size(n_A, n_B, min_size):
     """
     Check whether both variants meet the minimum required sample size.
 
@@ -22,12 +23,11 @@ def check_minimum_sample_size(n_A,n_B,min_size):
     Notes:
     - This function encodes a policy decision, not a statistical calculation.
     """
-    if (
-        n_A < min_size or n_B < min_size
-    ):  # ensures enough data for variance calculation
+    if n_A < min_size or n_B < min_size:  # ensures enough data for variance calculation
         return False
-    else: 
+    else:
         return True
+
 
 def calculate_descriptive_statistics(outcomes):
     """
@@ -52,9 +52,10 @@ def calculate_descriptive_statistics(outcomes):
     n = len(outcomes)
     return (mean, var, std, n)
 
+
 def calculate_welch_test(mean_A, mean_B, var_A, var_B, n_A, n_B):
     """
-    
+
     Compute Welch's t-test components for two variants using precomputed
     descriptive statistics.
 
@@ -92,7 +93,8 @@ def calculate_welch_test(mean_A, mean_B, var_A, var_B, n_A, n_B):
 
     return (delta, se, df)
 
-def calculate_confidence_interval(delta,se,df,confidence_level):
+
+def calculate_confidence_interval(delta, se, df, confidence_level):
     """
     Compute a two-sided confidence interval for the difference in means.
 
@@ -116,14 +118,15 @@ def calculate_confidence_interval(delta,se,df,confidence_level):
     """
     if se == 0:
         return (delta, delta)
-    
-    alpha = 1 -confidence_level
+
+    alpha = 1 - confidence_level
     t_crit = stats.t.ppf(1 - alpha / 2, df)
 
     lower = delta - t_crit * se
     upper = delta + t_crit * se
 
     return (lower, upper)
+
 
 def calculate_effect_size(mean_A, mean_B, std_A, std_B, n_A, n_B):
     """
@@ -142,9 +145,7 @@ def calculate_effect_size(mean_A, mean_B, std_A, std_B, n_A, n_B):
         Cohen's d effect size. Returns 0.0 if pooled standard deviation is zero.
     """
     # Pooled standard deviation
-    pooled_var = (
-        ((n_A - 1) * std_A**2 + (n_B - 1) * std_B**2) / (n_A + n_B - 2)
-    )
+    pooled_var = ((n_A - 1) * std_A**2 + (n_B - 1) * std_B**2) / (n_A + n_B - 2)
 
     if pooled_var == 0:
         return 0.0
@@ -190,8 +191,8 @@ def compute_statistics(outcomes_1, outcomes_2):
     if not check_minimum_sample_size(len(outcomes_1), len(outcomes_2), 2):
         return None
 
-    mean_A,var_A,std_A,n_A = calculate_descriptive_statistics(outcomes_1)
-    mean_B,var_B,std_B,n_B = calculate_descriptive_statistics(outcomes_2)
+    mean_A, var_A, std_A, n_A = calculate_descriptive_statistics(outcomes_1)
+    mean_B, var_B, std_B, n_B = calculate_descriptive_statistics(outcomes_2)
 
     delta, se, df = calculate_welch_test(mean_A, mean_B, var_A, var_B, n_A, n_B)
 
@@ -200,12 +201,12 @@ def compute_statistics(outcomes_1, outcomes_2):
     effect_size = calculate_effect_size(mean_A, mean_B, std_A, std_B, n_A, n_B)
 
     return {
-        "mean_A": mean_A, 
-        "mean_B": mean_B, 
-        "delta": delta, 
-        "ci_lower": ci_lower, 
-        "ci_upper": ci_upper, 
-        "n_A": n_A, 
-        "n_B": n_B, 
-        "effect_size": effect_size
-        }
+        "mean_A": mean_A,
+        "mean_B": mean_B,
+        "delta": delta,
+        "ci_lower": ci_lower,
+        "ci_upper": ci_upper,
+        "n_A": n_A,
+        "n_B": n_B,
+        "effect_size": effect_size,
+    }

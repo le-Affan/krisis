@@ -18,6 +18,7 @@ def test_known_difference():
     # Check confidence interval does not include zero
     assert results["ci_lower"] > 0 or results["ci_upper"] < 0
 
+
 # Test 2: No difference when models are identical
 
 
@@ -40,6 +41,7 @@ def test_identical_models():
     # confidence interval should include zero
     assert results["ci_lower"] <= 0 <= results["ci_upper"]
 
+
 # Test 3: Minimum sample size warning
 
 
@@ -54,6 +56,7 @@ def test_minimum_sample_size_warning():
     # should return None due to insufficient data
     assert results is None
 
+
 # Test 4: No effect when distributions are identical
 
 """def test_no_effect_identical_distributions():
@@ -62,5 +65,3 @@ def test_minimum_sample_size_warning():
     arr2 = [0.5] * 100
 
     from src.statistics import """
-
-    

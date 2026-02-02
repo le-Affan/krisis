@@ -145,7 +145,6 @@ def compile_evidence():
     n_B = stats_result["n_B"]
     effect_size = stats_result["effect_size"]
 
-
     evidence = {
         "Model A Mean Outcome": round(mean_A, 4),
         "Model B Mean Outcome": round(mean_B, 4),
@@ -153,7 +152,7 @@ def compile_evidence():
         "95% Confidence Interval": (round(ci_lower, 4), round(ci_upper, 4)),
         "Number of Outcomes for Model A": n_A,
         "Number of Outcomes for Model B": n_B,
-        "Effect Size": round(effect_size, 4)
+        "Effect Size": round(effect_size, 4),
     }
 
     return evidence

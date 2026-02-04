@@ -24,3 +24,9 @@ class StorageBackend(ABC):
     @abstractmethod
     def get_outcomes_by_variant(self, variant: ModelVariant) -> List[float]:
         pass
+
+class InMemoryStorage(StorageBackend):
+    def __init__(self):
+        self.requests: Dict[str, Request] = {}
+        self.outcomes: Dict[str, Outcome] = {}
+

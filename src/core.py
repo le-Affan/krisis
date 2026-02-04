@@ -4,11 +4,14 @@ import random
 import uuid
 import time
 from src.statistics import compute_statistics
+from src.models import ModelVariant, Model, Request, Outcome
+from src.storage import InMemoryStorage
+
+# Global in-memory storage instance
+storage = InMemoryStorage()
 
 # In-Memory state
 models = {}
-requests = {}
-outcomes = {}
 
 
 # model registration function
@@ -26,8 +29,8 @@ def register_models(model_a, model_b):
     - Stores the models in in-memory state under keys "A" and "B".
     - Overwrites any previously registered models.
     """
-    models["A"] = model_a
-    models["B"] = model_b
+    models["A"] = Model(model_id="A", callable=model_a)
+    models["B"] = Model(model_id="B", callable=model_b)
 
 
 # request routing function
@@ -56,17 +59,22 @@ def route_request(X, probability_split):
     timestamp = time.time()
 
     # Select model based on probability split
-    random_value = random.random()
-    if random_value < probability_split:
-        selected_model = "A"
+    if random.random() < probability_split:
+        variant = ModelVariant.A
     else:
-        selected_model = "B"
+        variant = ModelVariant.B
 
-    # Store the request details
-    requests[request_id] = {"input": X, "model": selected_model, "timestamp": timestamp}
+    # create a store request object
+    request_object = Request(
+        request_id=request_id,
+        selected_model=variant,
+        input_data=X,
+        timestamp=timestamp
+    )
+    storage.save_request(request_object)
 
-    # Get prediction from the selected model
-    prediction = models[selected_model](X)
+    # Get prediction
+    prediction = models[variant.value].callable(X)
 
     return prediction, request_id
 
@@ -90,10 +98,19 @@ def record_delayed_outcome(request_id, outcome):
     - Links the outcome to the original request via request_id.
     - Assumes a single outcome per request.
     """
-    if request_id not in requests:
-        raise ValueError("Request ID not found")
+    request_object = storage.get_request(request_id)
 
-    outcomes[request_id] = outcome
+    if request_object is None:
+        raise ValueError(f"Request ID {request_id} not found.")
+    
+    outcome_object = Outcome(
+        request_id=request_id, 
+        outcome_value=outcome, 
+        timestamp=time.time()
+        )
+    
+    storage.save_outcome(outcome_object)
+    # outcomes[request_id] = outcome
 
 
 # function to compile all evidence
@@ -124,14 +141,9 @@ def compile_evidence():
     - Requests and outcomes stores are consistent and in sync.
     - Outcomes are numeric and comparable across variants.
     """
-    outcomes_A = []
-    outcomes_B = []
-    for req_id, outcome in outcomes.items():
-        model_used = requests[req_id]["model"]
-        if model_used == "A":
-            outcomes_A.append(outcome)
-        else:
-            outcomes_B.append(outcome)
+    outcomes_A = storage.get_outcomes_by_variant(ModelVariant.A)
+    outcomes_B = storage.get_outcomes_by_variant(ModelVariant.B)
+
     stats_result = compute_statistics(outcomes_A, outcomes_B)
     if stats_result is None:
         return "Not enough data to compute statistics."

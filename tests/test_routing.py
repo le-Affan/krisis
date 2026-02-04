@@ -1,9 +1,11 @@
 # Test 4: Assignment stability
 
-from src.core import register_models, route_request, requests
-
+from src.core import register_models, route_request, storage
+from src.models import ModelVariant
+import random
 
 def test_assignment_distribution_approximately_balanced():
+
     # dummy models
     def model_a(x):
         return x + 1
@@ -22,10 +24,10 @@ def test_assignment_distribution_approximately_balanced():
     count_a = 0
     count_b = 0
 
-    for req in requests.values():
-        if req["model"] == "A":
+    for req in storage.requests.values():
+        if req.selected_model == ModelVariant.A:
             count_a += 1
-        elif req["model"] == "B":
+        elif req.selected_model == ModelVariant.B:
             count_b += 1
 
     ratio_a = count_a / total_requests

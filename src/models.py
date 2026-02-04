@@ -3,7 +3,6 @@ from typing import Dict, Any
 from enum import Enum
 
 
-@dataclass
 class ModelVariant(Enum):
     A = "A"
     B = "B"

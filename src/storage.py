@@ -36,6 +36,12 @@ class InMemoryStorage(StorageBackend):
     def save_outcome(self, outcome)-> None:
         self.outcomes[outcome.request_id] = outcome
     
-    
+    def get_request(self, request_id)-> Optional[Request]:
+        if request_id in self.requests:
+            return self.requests[request_id]
+        return None
+
+    def get_all_outcomes(self) -> Dict[str, Outcome]:
+         return self.outcomes
     
 

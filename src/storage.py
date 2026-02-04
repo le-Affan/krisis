@@ -30,3 +30,12 @@ class InMemoryStorage(StorageBackend):
         self.requests: Dict[str, Request] = {}
         self.outcomes: Dict[str, Outcome] = {}
 
+    def save_request(self, request) -> None:
+        self.requests[request.request_id] = request
+    
+    def save_outcome(self, outcome)-> None:
+        self.outcomes[outcome.request_id] = outcome
+    
+    
+    
+

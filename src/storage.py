@@ -44,4 +44,17 @@ class InMemoryStorage(StorageBackend):
     def get_all_outcomes(self) -> Dict[str, Outcome]:
          return self.outcomes
     
+    def get_outcomes_by_variant(self, variant: ModelVariant) -> List[float]:
+        res = []
+        for request_id, outcome in self.outcomes.items():
+            try:
+                if self.requests[request_id].selected_model == variant:
+                    res.append(outcome.outcome_value)
+            except KeyError:
+                continue
+        return res
+
+class DatabaseStorage(StorageBackend):
+    pass  # Placeholder for future
+
 

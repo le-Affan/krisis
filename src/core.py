@@ -166,5 +166,4 @@ def compile_evidence():
         "Number of Outcomes for Model B": n_B,
         "Effect Size": round(effect_size, 4),
     }
-
     return evidence

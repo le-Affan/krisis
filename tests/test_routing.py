@@ -2,7 +2,7 @@
 
 from src.core import register_models, route_request, storage
 from src.models import ModelVariant
-import random
+
 
 def test_assignment_distribution_approximately_balanced():
 

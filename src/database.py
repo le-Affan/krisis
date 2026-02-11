@@ -4,6 +4,7 @@ from sqlalchemy.pool import StaticPool
 
 Base = declarative_base()
 
+
 def get_engine(database_url: str, echo: bool = False):
     # Create database engine
     if database_url.startswith("sqlite"):
@@ -11,10 +12,17 @@ def get_engine(database_url: str, echo: bool = False):
             database_url,
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
-            echo=echo
+            echo=echo,
         )
     else:
-        #PostgreSQL
-        return create_engine(database_url,echo=echo,pool_pre_ping=True)
-        
+        # PostgreSQL
+        return create_engine(database_url, echo=echo, pool_pre_ping=True)
+
+def get_session_factory(engine):
+    # Create session factory
+    return sessionmaker(bind=engine,expire_on_commit=False)
+
+def init_db(engine):
+    # Initialize database schema
+    Base.metadata.create_all(engine)
     

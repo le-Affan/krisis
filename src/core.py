@@ -1,10 +1,11 @@
 # venv\Scripts\activate
 
 import random
-import uuid
 import time
+import uuid
+
+from src.models import Model, ModelVariant, Outcome, Request
 from src.statistics import compute_statistics
-from src.models import ModelVariant, Model, Request, Outcome
 from src.storage import InMemoryStorage
 
 # Global in-memory storage instance
@@ -66,10 +67,7 @@ def route_request(X, probability_split):
 
     # create a store request object
     request_object = Request(
-        request_id=request_id,
-        selected_model=variant,
-        input_data=X,
-        timestamp=timestamp
+        request_id=request_id, selected_model=variant, input_data=X, timestamp=timestamp
     )
     storage.save_request(request_object)
 
@@ -102,13 +100,11 @@ def record_delayed_outcome(request_id, outcome):
 
     if request_object is None:
         raise ValueError(f"Request ID {request_id} not found.")
-    
+
     outcome_object = Outcome(
-        request_id=request_id, 
-        outcome_value=outcome, 
-        timestamp=time.time()
-        )
-    
+        request_id=request_id, outcome_value=outcome, timestamp=time.time()
+    )
+
     storage.save_outcome(outcome_object)
     # outcomes[request_id] = outcome
 

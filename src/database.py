@@ -3,6 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 Base = declarative_base()
+# this will tell SQLAlchemy "Any class that inherits from me is a database table."
 
 
 def get_engine(database_url: str, echo: bool = False):
@@ -18,11 +19,12 @@ def get_engine(database_url: str, echo: bool = False):
         # PostgreSQL
         return create_engine(database_url, echo=echo, pool_pre_ping=True)
 
+
 def get_session_factory(engine):
     # Create session factory
-    return sessionmaker(bind=engine,expire_on_commit=False)
+    return sessionmaker(bind=engine, expire_on_commit=False)
+
 
 def init_db(engine):
     # Initialize database schema
     Base.metadata.create_all(engine)
-    

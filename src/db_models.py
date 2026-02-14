@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, Column, DateTime, String
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Index, String
 from sqlalchemy.sql import func
 
 from src.database import Base
@@ -28,3 +28,24 @@ class DBExperiments(Base):
     status = Column(String(50), default="running")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
+
+
+class DBRequest(Base):
+    __tablename__ = "requests"
+    request_id = Column(String(255), primary_key=True)
+    experiment_id = Column(String(255), ForeignKey("experiments.experiment_id"))
+    model_variant = Column(String(10))  # "A" or "B"
+    timestamp = Column(DateTime)
+    metadata = Column(JSON)
+
+    __table_args__ = (Index("idx_experiment_timestamp", "experiment_id", "timestamp"),)
+
+
+class DBOutcome(Base):
+    __tablename__ = "outcomes"
+    request_id = Column(
+        String(255), ForeignKey("requests.request_id"), primary_key=True
+    )
+    value = Column(Float)
+    timestamp = Column(DateTime)
+    __table_args__ = (Index("idx_request_id", "request_id"),)

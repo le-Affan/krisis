@@ -2,7 +2,7 @@ from datetime import datetime
 
 from src import db_models  # Ensures models are registered
 from src.database import get_engine, get_session_factory, init_db
-from src.models import ModelVariant, Request
+from src.models import ModelVariant, Outcome, Request
 from src.storage import DatabaseStorage
 
 
@@ -43,3 +43,55 @@ def test_save_request_persists_to_db(tmp_path):
 
     assert result is not None
     assert str(result.model_variant) == "A"
+
+
+def test_save_outcome_and_filter_by_variant(tmp_path):
+    db_file = tmp_path / "test_storage.db"
+    database_url = f"sqlite:///{db_file}"
+
+    engine = get_engine(database_url)
+    init_db(engine)
+    session_factory = get_session_factory(engine)
+
+    storage = DatabaseStorage(session_factory)
+
+    # Create two requests with different variants
+    req_a = Request(
+        request_id="req_A",
+        selected_model=ModelVariant.A,
+        input_data=None,
+        timestamp=datetime.utcnow().timestamp(),
+    )
+
+    req_b = Request(
+        request_id="req_B",
+        selected_model=ModelVariant.B,
+        input_data=None,
+        timestamp=datetime.utcnow().timestamp(),
+    )
+
+    storage.save_request(req_a)
+    storage.save_request(req_b)
+
+    # Save outcomes for both
+    outcome_a = Outcome(
+        request_id="req_A",
+        outcome_value=1.0,
+        timestamp=datetime.utcnow().timestamp(),
+    )
+
+    outcome_b = Outcome(
+        request_id="req_B",
+        outcome_value=0.0,
+        timestamp=datetime.utcnow().timestamp(),
+    )
+
+    storage.save_outcome(outcome_a)
+    storage.save_outcome(outcome_b)
+
+    # Now query outcomes by variant
+    outcomes_a = storage.get_outcomes_by_variant(ModelVariant.A)
+    outcomes_b = storage.get_outcomes_by_variant(ModelVariant.B)
+
+    assert outcomes_a == [1.0]
+    assert outcomes_b == [0.0]

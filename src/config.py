@@ -1,9 +1,12 @@
 from typing import Optional
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # Tell Pydantic to read from .env
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
     # Database
     database_url: str = "sqlite:///./abtest.db"
 
@@ -18,11 +21,13 @@ class Settings(BaseSettings):
     # Storage
     storage_backend: str = "database"  # "memory" or "database"
 
+    """
     class Config:  # this tells pydantic "Where should I load environment variables from?"
         env_file = ".env"
         env_file_encoding = "utf-8"
 
     # So instead of only reading system-level environment variables, it will also read from .env
+    """
 
 
 def get_settings() -> Settings:

@@ -18,3 +18,18 @@ venv/
 # Logs / data
 *.log
 data/
+
+# SQLite database files
+*.db
+*.db-journal
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+env/
+
+# Alembic compiled files
+migrations/__pycache__/

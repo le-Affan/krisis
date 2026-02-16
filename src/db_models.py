@@ -12,7 +12,7 @@ class DBModel(Base):
     model_id = Column(String(255), primary_key=True)
     adapter_type = Column(String(50))  #'python callable', 'http_endpoint'
     location = Column(String(50))  # path or URL
-    metadata = Column(JSON)
+    model_metadata = Column(JSON)
     created_at = Column(DateTime, server_default=func.now())
 
 
@@ -36,7 +36,7 @@ class DBRequest(Base):
     experiment_id = Column(String(255), ForeignKey("experiments.experiment_id"))
     model_variant = Column(String(10))  # "A" or "B"
     timestamp = Column(DateTime)
-    metadata = Column(JSON)
+    request_metadata = Column(JSON)
 
     __table_args__ = (Index("idx_experiment_timestamp", "experiment_id", "timestamp"),)
 

@@ -1,8 +1,8 @@
-import datetime
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Dict, List, Optional
 
-from src.db_models import DBRequest
+from src.db_models import DBOutcome, DBRequest
 from src.models import ModelVariant, Outcome, Request
 
 
@@ -70,11 +70,11 @@ class DatabaseStorage(StorageBackend):
         try:
             db_request = DBRequest(
                 request_id=request.request_id,
-                experiment_id="default",  # Will add later
-                model_variant=request.model_variant.value,
+                experiment_id="default",
+                model_variant=request.selected_model.value,
                 timestamp=datetime.fromtimestamp(request.timestamp),
-                metadata=request.request_metadata,
             )
+
             session.add(db_request)
             session.commit()
         finally:
@@ -85,11 +85,49 @@ class DatabaseStorage(StorageBackend):
         try:
             db_outcome = DBOutcome(
                 request_id=outcome.request_id,
-                value=outcome.value,
+                value=outcome.outcome_value,
                 timestamp=datetime.fromtimestamp(outcome.timestamp),
             )
             session.add(db_outcome)
             session.commit()
+        finally:
+            session.close()
+
+    def get_request(self, request_id: str) -> Optional[Request]:
+        session = self.session_factory()
+        try:
+            db_request = (
+                session.query(DBRequest)
+                .filter(DBRequest.request_id == request_id)
+                .first()
+            )
+
+            if db_request is None:
+                return None
+
+            return Request(
+                request_id=db_request.request_id,
+                selected_model=ModelVariant(db_request.model_variant),
+                input_data=None,  # Not persisted in DB
+                timestamp=db_request.timestamp.timestamp(),
+            )
+        finally:
+            session.close()
+
+    def get_all_outcomes(self) -> Dict[str, Outcome]:
+        session = self.session_factory()
+        try:
+            db_outcomes = session.query(DBOutcome).all()
+
+            outcomes = {}
+            for db_outcome in db_outcomes:
+                outcomes[db_outcome.request_id] = Outcome(
+                    request_id=db_outcome.request_id,
+                    outcome_value=db_outcome.value,
+                    timestamp=db_outcome.timestamp.timestamp(),
+                )
+
+            return outcomes
         finally:
             session.close()
 

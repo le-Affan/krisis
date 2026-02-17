@@ -95,3 +95,12 @@ def test_save_outcome_and_filter_by_variant(tmp_path):
 
     assert outcomes_a == [1.0]
     assert outcomes_b == [0.0]
+
+
+def test_route_request_works_with_both_backends(framework):
+    framework.register_models(lambda x: x + 1, lambda x: x * 2)
+
+    prediction, request_id = framework.route_request(5, 0.5)
+
+    assert request_id is not None
+    assert prediction in [6, 10]

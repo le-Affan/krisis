@@ -15,13 +15,17 @@ def test_assignment_distribution_approximately_balanced(framework):
     total_requests = 1000
     probability_split = 0.5
 
+    request_ids = []
+
     for _ in range(total_requests):
-        framework.route_request(1, probability_split)
+        _, request_id = framework.route_request(1, probability_split)
+        request_ids.append(request_id)
 
     count_a = 0
     count_b = 0
 
-    for req in framework.storage.requests.values():
+    for req_id in request_ids:
+        req = framework.storage.get_request(req_id)
         if req.selected_model == ModelVariant.A:
             count_a += 1
         elif req.selected_model == ModelVariant.B:

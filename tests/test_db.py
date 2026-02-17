@@ -104,3 +104,41 @@ def test_route_request_works_with_both_backends(framework):
 
     assert request_id is not None
     assert prediction in [6, 10]
+
+
+def test_outcome_storage_and_retrieval(framework):
+    framework.register_models(lambda x: x, lambda x: x)
+
+    # Force A
+    for _ in range(2):
+        _, request_id = framework.route_request(1, 1.0)
+        framework.record_delayed_outcome(request_id, 1.0)
+
+    # Force B
+    for _ in range(2):
+        _, request_id = framework.route_request(1, 0.0)
+        framework.record_delayed_outcome(request_id, 0.0)
+
+    result = framework.compile_evidence()
+
+    assert result != "Not enough data to compute statistics."
+
+
+def test_multiple_requests(framework):
+    framework.register_models(lambda x: x, lambda x: x)
+
+    for _ in range(10):
+        _, request_id = framework.route_request(1, 0.5)
+        framework.record_delayed_outcome(request_id, 1.0)
+
+    result = framework.compile_evidence()
+    assert result is not None
+
+
+def test_invalid_request_raises(framework):
+    try:
+        framework.record_delayed_outcome("invalid-id", 1.0)
+    except ValueError:
+        assert True
+    else:
+        assert False

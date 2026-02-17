@@ -10,7 +10,7 @@ class DBModel(Base):
     __tablename__ = "models"
 
     model_id = Column(String(255), primary_key=True)
-    adapter_type = Column(String(50))  #'python callable', 'http_endpoint'
+    adapter_type = Column(String(50))  # 'python callable', 'http_endpoint'
     location = Column(String(50))  # path or URL
     model_metadata = Column(JSON)
     created_at = Column(DateTime, server_default=func.now())

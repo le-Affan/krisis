@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,7 +20,8 @@ class Settings(BaseSettings):
     storage_backend: str = "database"  # "memory" or "database"
 
     """
-    class Config:  # this tells pydantic "Where should I load environment variables from?"
+    # this tells pydantic "Where should I load environment variables from?"
+    class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
 

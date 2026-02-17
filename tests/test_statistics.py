@@ -23,7 +23,6 @@ def test_known_difference():
 
 
 def test_identical_models():
-
     # both models have same outcomes
     arr1 = [0.6] * 100
     arr2 = [0.6] * 100
@@ -46,7 +45,6 @@ def test_identical_models():
 
 
 def test_no_effect_identical_distributions():
-
     arr1 = [0.5] * 100
     arr2 = [0.5] * 100
 
@@ -90,7 +88,6 @@ def test_monte_carlo_confidence_interval_coverage():
 
 
 def test_minimum_sample_size_warning():
-
     from src.statistics import check_minimum_sample_size
 
     assert check_minimum_sample_size(2, 2, 2) is True

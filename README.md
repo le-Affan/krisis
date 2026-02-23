@@ -1,60 +1,107 @@
-# KRISIS — A/B Testing Framework for ML Models
+<div align="center">
 
-## Overview
+# ⚔️ KRISIS
 
-KRISIS is a lightweight A/B testing framework designed to compare two machine-learning model variants under real traffic using statistically sound methods.
+### Production-Grade A/B Experimentation Framework for Machine Learning Systems
 
-It curently supports:
+**Online Evidence. Statistical Rigor. Zero Guesswork.**
 
-* randomized traffic routing
-* delayed outcome attribution
-* statistical comparison using confidence intervals
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)]()
+[![FastAPI](https://img.shields.io/badge/FastAPI-API%20Layer-009688.svg)]()
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Storage-336791.svg)]()
+[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
 
-The current system is intentionally simple and in-memory, serving as a correct and testable MVP that is being extended with persistence, APIs, and deterministic routing.
-
----
-
-## Core Concepts
-
-### Model Variants
-
-Two model variants are registered as:
-
-* **Variant A** (baseline)
-* **Variant B** (candidate)
+</div>
 
 ---
 
-### Request Routing
+## What Is KRISIS?
 
-Incoming requests are:
+KRISIS is a **production-shaped A/B testing framework for machine learning models**.
 
-* randomly assigned to variant A or B based on a probability split
-* logged in memory with a unique `request_id`
-* associated with the selected variant for later attribution
+It routes live traffic between competing model variants, captures delayed real-world outcomes, and computes statistically rigorous evidence, enabling teams to answer one critical question:
 
----
+> Does this model actually perform better in production?
 
-### Delayed Outcomes
-
-Outcomes are recorded **after** prediction using the `request_id`.
-
-This allows the system to support:
-
-* delayed feedback (e.g. conversions, revenue)
-* correct attribution of outcomes to model variants
+Most ML evaluation happens offline.
+KRISIS exists to bring **online experimental evidence** into the loop.
 
 ---
 
-### Statistical Evidence
+## Why This Exists
 
-Once sufficient outcomes are available:
+Offline metrics lie.
 
-* outcomes are grouped by variant
-* Welch’s t-test is used to compare mean outcomes
-* a 95% confidence interval for the difference in means is computed
+* Distribution shift
+* Proxy targets
+* Noisy labels
+* Delayed outcomes
+* Tiny effect sizes
 
-The system emphasizes **uncertainty-aware evidence**, not automated decisions.
+Accuracy improvements in notebooks often disappear in production.
+
+KRISIS closes the gap between:
+
+**Offline evaluation → Live traffic → Statistical certainty**
+
+---
+
+## Architecture Overview
+
+```
+Client Request
+      ↓
+FastAPI Layer
+      ↓
+Traffic Router
+      ↓
+Model Variant
+      ↓
+Prediction Logger
+      ↓
+Delayed Outcome Ingestion
+      ↓
+Statistical Engine
+      ↓
+Evidence & Confidence Intervals
+```
+
+The system separates:
+
+* **Routing logic**
+* **Storage abstraction**
+* **Statistical computation**
+* **API layer orchestration**
+
+This ensures clean boundaries and extensibility.
+
+---
+
+## Core Capabilities
+
+### Randomized Traffic Routing
+
+* Probabilistic split between model A and B
+* Unique request tracking
+* Variant attribution for every prediction
+
+### Delayed Outcome Attribution
+
+* Outcomes recorded asynchronously
+* Correct linking via unique `request_id`
+* Supports real-world feedback in the form of conversion, revenue, etc.
+
+### Statistical Engine
+
+* Welch’s t-test (unequal variance)
+* Difference in means (B − A)
+* 95% confidence intervals
+* Effect size reporting
+* Minimum sample guardrails
+
+KRISIS does not auto-deploy winners.
+It provides evidence for humans to decide.
 
 ---
 
@@ -63,123 +110,168 @@ The system emphasizes **uncertainty-aware evidence**, not automated decisions.
 ```
 KRISIS/
 ├── src/
-│   ├── core.py           # Routing, state, orchestration
-│   └── statistics.py     # Pure statistical computation
+│   ├── core.py              # Routing, orchestration, storage wiring
+│   ├── statistics.py        # Pure statistical computation
+│   ├── api/                 # FastAPI layer
+│   ├── storage/             # In-memory / database backends
+│   └── models/              # Data models
 ├── tests/
 │   ├── test_statistics.py
 │   ├── test_routing.py
 │   └── test_integration.py
 ├── requirements.txt
-├── requirements-dev.txt
-├── pytest.ini
 └── README.md
 ```
 
 ### Design Principles
 
-* **Pure statistics** live in `statistics.py`
-* **System wiring** lives in `core.py`
-* Tests are split by responsibility:
-
-  * unit tests for statistical correctness
-  * routing tests for probabilistic behavior
-  * integration tests for end-to-end wiring
+* Pure statistical logic isolated from system wiring
+* Storage abstraction (memory → database)
+* Deterministic extension-ready routing
+* API-first architecture
+* Test-driven validation
 
 ---
 
-## How to Run
+## Statistical Methodology
 
-### 1. Set up environment
+**Metric:** Difference in mean outcomes (B − A)
+
+**Test:** Welch’s t-test (unequal variances)
+
+**Confidence Interval:** Two-sided 95%
+
+**Guardrails:** Minimum outcomes per variant
+
+Edge cases handled:
+
+* Insufficient data
+* Degenerate variance
+* High variance warnings
+
+KRISIS emphasizes uncertainty-aware evidence over binary "significance".
+
+---
+
+## API Layer (In Progress)
+
+FastAPI-based REST interface:
+
+* `POST /predict` → Route traffic and return prediction
+* `POST /outcomes` → Record delayed outcomes
+* `GET /results` → Retrieve statistical evidence
+* `GET /health` → System health check
+
+Interactive docs available at:
+
+```
+/api/v1/docs
+```
+
+---
+
+## Quickstart
+
+### 1️⃣ Setup Environment
 
 ```bash
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-pip install -r requirements-dev.txt
 ```
 
----
-
-### 2. Run tests
+### 2️⃣ Run Tests
 
 ```bash
 pytest
 ```
 
-All tests should pass:
+All tests validate:
 
-* statistical correctness
-* routing behavior
-* full system integration
+* Routing behavior
+* Statistical correctness
+* End-to-end system integrity
 
 ---
 
 ## Example Usage
 
 ```python
-from src.core import (
-    register_models,
-    route_request,
-    record_delayed_outcome,
-    compile_evidence,
-)
+from src.core import ABTestFramework
 
-# Define two dummy models
-def model_a(x):
-    return x
-
-def model_b(x):
-    return x
+framework = ABTestFramework()
 
 # Register models
-register_models(model_a, model_b)
+framework.register_models(model_a, model_b)
 
-# Route requests
-request_ids = []
-for _ in range(100):
-    _, req_id = route_request(1, probability_split=0.5)
-    request_ids.append(req_id)
+# Route traffic
+prediction, request_id = framework.route_request(
+    X=data,
+    probability_split=0.5
+)
 
-# Record delayed outcomes
-for req_id in request_ids:
-    record_delayed_outcome(req_id, 1.0)
+# Record delayed outcome
+framework.record_delayed_outcome(request_id, outcome=1.0)
 
-# Compile statistical evidence
-evidence = compile_evidence()
-print(evidence)
+# Compile evidence
+results = framework.compile_evidence()
+print(results)
 ```
 
 ---
 
-## Statistical Methodology
+## Roadmap
 
-* **Comparison metric:** Difference in mean outcomes (B − A)
-* **Test:** Welch’s t-test (unequal variances)
-* **Confidence interval:** Two-sided 95%
-* **Minimum sample size:** ≥ 2 outcomes per variant
-
-### Edge Case Handling
-
-* Insufficient data → no statistics returned
-* Zero variance in both variants → degenerate confidence interval
-* Emphasis on confidence intervals over binary significance
+✔ Core routing engine
+✔ Statistical computation module
+✔ Storage abstraction
+✔ FastAPI layer
+🔄 Database persistence
+⬜ Deterministic routing via hashing
+⬜ Multi-experiment support
+⬜ Public deployment
 
 ---
 
-## Next Planned Extensions
+## Deployment Vision
 
-* storage abstraction 
-* deterministic routing via hashing
-* multi-experiment support
-* REST API layer
-* database persistence
+KRISIS is designed to evolve into:
+
+* Horizontally scalable API service
+* PostgreSQL-backed experimentation system
+* Containerized production deployment
+* Experiment lifecycle management
+* Evidence reporting with stability signals
+
+This is infrastructure — not a notebook experiment.
 
 ---
 
-## Why This Exists
+## The Philosophy
 
-Most ML failures happen after deployment, not during training.
+Machine learning systems fail silently in production.
 
-KRISIS exists to answer one question rigorously:
+KRISIS introduces a missing discipline:
 
-> Does this model actually perform better in production ?
+**Treat model deployment like a scientific experiment.**
+
+Randomization.
+Attribution.
+Statistical uncertainty.
+Evidence over intuition.
+
+---
+
+## 📜 License
+
+MIT License
+
+---
+
+<div align="center">
+
+### KRISIS
+
+**Because shipping models without evidence is gambling.**
+
+</div>

@@ -26,3 +26,20 @@ app.add_middleware(
 # When an endpoint needs the framework, create one and give it.
 def get_framework():
     return ABTestFramework()  # Create singleton or per-request instance
+
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "storage_backend": settings.storage_backend,
+    }
+
+
+# Include routers
+from src.api.routes import experiments, predictions, results
+
+app.include_router(experiments.router, prefix="/api/v1", tags=["experiments"])
+app.include_router(predictions.router, prefix="/api/v1", tags=["predictions"])
+app.include_router(results.router, prefix="/api/v1", tags=["results"])

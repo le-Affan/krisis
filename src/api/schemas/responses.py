@@ -26,3 +26,13 @@ class HealthCheckResponse(BaseModel):
     status: str
     version: str
     storage_backend: str
+
+
+class ExperimentResponse(BaseModel):
+    experiment_id: str
+    model_a_id: str
+    model_b_id: str
+    probability_split: float
+    metric_type: str
+    confidence_level: float
+    status: str

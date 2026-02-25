@@ -1,10 +1,7 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.api.main import get_framework
-from src.api.schemas.requests import OutcomeReportRequest, PredictionRequest
-from src.api.schemas.responses import PredictionResponse, StatisticalResults
+from src.api.schemas.responses import StatisticalResults
 from src.core import ABTestFramework
 
 router = APIRouter()

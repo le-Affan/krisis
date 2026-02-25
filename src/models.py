@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Dict, Any
 from enum import Enum
+from typing import Any, Dict
 
 
 class ModelVariant(Enum):
@@ -35,7 +35,7 @@ class ExperimentConfig:
     experiment_id: str
     model_a_id: str
     model_b_id: str
-    traffic_split: float  # Probability of routing to model A
+    probability_split: float  # Probability of routing to model A
     confidence_level: float
     metric_type: str  # "binary" or "continuous"
     status: str

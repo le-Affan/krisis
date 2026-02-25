@@ -3,6 +3,7 @@ from logging import exception
 from typing import cast
 
 from fastapi import APIRouter, HTTPException
+from starlette.types import HTTPExceptionHandler
 
 from src.api.schemas.requests import ExperimentCreateRequest
 from src.api.schemas.responses import ExperimentResponse
@@ -57,5 +58,38 @@ async def create_experiment(request: ExperimentCreateRequest):
     except HTTPException:
         raise
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/experiments/{experiment_id}", response_model=ExperimentResponse)
+async def get_experiment(experiment_id: str):
+    try:
+        settings = get_settings()
+        engine = get_engine(settings.database_url)
+        session_factory = get_session_factory(engine)
+        session = session_factory()
+
+        try:
+            db_experiment = session.get(DBExperiments, experiment_id)
+
+            if not db_experiment:
+                raise HTTPException(status_code=404, detail="Experiment not found.")
+
+            return ExperimentResponse(
+                experiment_id=cast(str, db_experiment.experiment_id),
+                model_a_id=cast(str, db_experiment.model_a_id),
+                model_b_id=cast(str, db_experiment.model_b_id),
+                probability_split=cast(float, db_experiment.probability_split),
+                metric_type=cast(str, db_experiment.metric_type),
+                confidence_level=cast(float, db_experiment.confidence_level),
+                status=cast(str, db_experiment.status),
+            )
+
+        finally:
+            session.close()
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

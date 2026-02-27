@@ -38,8 +38,8 @@ async def report_outcome(
 ):
     """Report a delayed outcome for a previous prediction"""
     try:
-        framework.record_delayed_outcome(request.request_id, request.value)
-        return {"status": "success", "request_id": request.request_id}
+        framework.record_delayed_outcome(str(request.request_id), request.value)
+        return {"status": "success", "request_id": str(request.request_id)}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

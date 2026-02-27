@@ -1,9 +1,7 @@
 from datetime import datetime
-from logging import exception
 from typing import cast
 
 from fastapi import APIRouter, HTTPException
-from starlette.types import HTTPExceptionHandler
 
 from src.api.schemas.requests import ExperimentCreateRequest, ExperimentUpdateRequest
 from src.api.schemas.responses import ExperimentResponse
@@ -26,7 +24,7 @@ async def create_experiment(request: ExperimentCreateRequest):
             # Check if experiment already exists
             existing = session.get(DBExperiments, request.experiment_id)
             if existing:
-                raise HTTPException(status_code=400, detail="Experiment already exists")
+                raise HTTPException(status_code=409, detail="Experiment already exists")
 
             db_experiment = DBExperiments(
                 experiment_id=request.experiment_id,

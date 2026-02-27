@@ -1,6 +1,8 @@
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
+from src.api.routes import experiments, predictions, results
 from src.config import get_settings
 from src.core import ABTestFramework
 
@@ -38,8 +40,18 @@ async def health_check():
 
 
 # Include routers
-from src.api.routes import experiments, predictions, results
-
 app.include_router(experiments.router, prefix="/api/v1", tags=["experiments"])
 app.include_router(predictions.router, prefix="/api/v1", tags=["predictions"])
 app.include_router(results.router, prefix="/api/v1", tags=["results"])
+
+
+# Custom Exception Handler
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "Invalid value",
+            "detail": str(exc),
+        },
+    )

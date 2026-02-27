@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.api.routes import experiments, predictions, results
 from src.config import get_settings
 from src.core import ABTestFramework
 
@@ -38,6 +37,8 @@ async def health_check():
         "storage_backend": settings.storage_backend,
     }
 
+
+from src.api.routes import experiments, predictions, results
 
 # Include routers
 app.include_router(experiments.router, prefix="/api/v1", tags=["experiments"])

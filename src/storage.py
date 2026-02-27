@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from src.db_models import DBOutcome, DBRequest
+from sqlalchemy import func
+
+from src.db_models import DBExperiments, DBOutcome, DBRequest
 from src.models import ModelVariant, Outcome, Request
 
 
@@ -27,6 +29,18 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def get_outcomes_by_variant(self, variant: ModelVariant) -> List[float]:
+        pass
+
+    @abstractmethod
+    def get_experiment_count(self) -> int:
+        pass
+
+    @abstractmethod
+    def get_request_count(self) -> int:
+        pass
+
+    @abstractmethod
+    def get_outcome_count(self) -> int:
         pass
 
 
@@ -58,6 +72,16 @@ class InMemoryStorage(StorageBackend):
             except KeyError:
                 continue
         return res
+
+    def get_experiment_count(self) -> int:
+        # In-memory storage does not track experiments
+        return 0
+
+    def get_request_count(self) -> int:
+        return len(self.requests)
+
+    def get_outcome_count(self) -> int:
+        return len(self.outcomes)
 
 
 class DatabaseStorage(StorageBackend):
@@ -142,5 +166,29 @@ class DatabaseStorage(StorageBackend):
                 .all()
             )
             return [r[0] for r in results]
+        finally:
+            session.close()
+
+    def get_experiment_count(self) -> int:
+        session = self.session_factory()
+        try:
+            count = session.query(func.count(DBExperiments.experiment_id)).scalar()
+            return count or 0
+        finally:
+            session.close()
+
+    def get_request_count(self) -> int:
+        session = self.session_factory()
+        try:
+            count = session.query(func.count(DBRequest.request_id)).scalar()
+            return count or 0
+        finally:
+            session.close()
+
+    def get_outcome_count(self) -> int:
+        session = self.session_factory()
+        try:
+            count = session.query(func.count(DBOutcome.request_id)).scalar()
+            return count or 0
         finally:
             session.close()

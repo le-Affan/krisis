@@ -1,9 +1,13 @@
-from fastapi import FastAPI, Request
+import logging
+import time
+
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.config import get_settings
 from src.core import ABTestFramework
+from src.logging_config import setup_logging
 
 settings = get_settings()
 
@@ -12,6 +16,29 @@ app = FastAPI(
     description="Production grade experimentation system for your models",
     version="1.0",
 )
+
+
+setup_logging()
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+
+    logging.info(
+        "request_processed",
+        extra={
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "process_time": round(process_time, 4),
+        },
+    )
+
+    return response
+
 
 # CORS for web clients
 app.add_middleware(
@@ -56,3 +83,12 @@ async def value_error_handler(request: Request, exc: ValueError):
             "detail": str(exc),
         },
     )
+
+
+@app.get("/metrics")
+async def metrics(framework=Depends(get_framework)):
+    return {
+        "total_experiments": framework.storage.get_experiment_count(),
+        "total_requests": framework.storage.get_request_count(),
+        "total_outcomes": framework.storage.get_outcome_count(),
+    }

@@ -133,3 +133,36 @@ async def update_experiment(experiment_id: str, request: ExperimentUpdateRequest
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/experiments", response_model=list[ExperimentResponse])
+async def list_all_experiments():
+    try:
+        settings = get_settings()
+        engine = get_engine(settings.database_url)
+        session_factory = get_session_factory(engine)
+        session = session_factory()
+
+        try:
+            experiments = session.query(DBExperiments).all()
+
+            return [
+                ExperimentResponse(
+                    experiment_id=cast(str, exp.experiment_id),
+                    model_a_id=cast(str, exp.model_a_id),
+                    model_b_id=cast(str, exp.model_b_id),
+                    probability_split=cast(float, exp.probability_split),
+                    metric_type=cast(str, exp.metric_type),
+                    confidence_level=cast(float, exp.confidence_level),
+                    status=cast(str, exp.status),
+                )
+                for exp in experiments
+            ]
+
+        finally:
+            session.close()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

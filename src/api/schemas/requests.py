@@ -1,4 +1,6 @@
+from datetime import datetime
 from typing import Any, Dict, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -32,9 +34,9 @@ class PredictionRequest(BaseModel):
 
 
 class OutcomeReportRequest(BaseModel):
-    request_id: str
-    value: float
-    timestamp: Optional[str] = None  # ISO format, auto if not provided
+    request_id: UUID
+    value: float = Field(..., description="Outcome value", allow_inf_nan=False)
+    timestamp: Optional[datetime] = None  # ISO format, auto if not provided
 
 
 class ExperimentUpdateRequest(BaseModel):

@@ -2,7 +2,7 @@
 
 # ⚔️ KRISIS
 
-### Production-Grade A/B Experimentation Framework for Machine Learning Systems
+### A/B Testing Framework for Machine Learning Systems
 
 **Online Evidence. Statistical Rigor. Zero Guesswork.**
 
@@ -90,7 +90,7 @@ This ensures clean boundaries and extensibility.
 
 * Outcomes recorded asynchronously
 * Correct linking via unique `request_id`
-* Supports real-world feedback in the form of conversion, revenue, etc.
+* Supports real-world feedback such as conversions, revenue, engagement etc.
 
 ### Statistical Engine
 
@@ -100,8 +100,8 @@ This ensures clean boundaries and extensibility.
 * Effect size reporting
 * Minimum sample guardrails
 
-KRISIS does not auto-deploy winners.
-It provides evidence for humans to decide.
+KRISIS does **not auto-deploy winners**.
+It provides evidence so humans can make the final decision.
 
 ---
 
@@ -110,10 +110,10 @@ It provides evidence for humans to decide.
 ```
 KRISIS/
 ├── src/
-│   ├── core.py              # Routing, orchestration, storage wiring
-│   ├── statistics.py        # Pure statistical computation
+│   ├── core.py              # Routing and orchestration
+│   ├── statistics.py        # Statistical computation engine
 │   ├── api/                 # FastAPI layer
-│   ├── storage/             # In-memory / database backends
+│   ├── storage/             # In-memory and database backends
 │   └── models/              # Data models
 ├── tests/
 │   ├── test_statistics.py
@@ -149,30 +149,13 @@ Edge cases handled:
 * Degenerate variance
 * High variance warnings
 
-KRISIS emphasizes uncertainty-aware evidence over binary "significance".
+KRISIS emphasizes **uncertainty-aware evidence** rather than binary "significance" decisions.
 
 ---
 
-## API Layer (In Progress)
+# Running the System
 
-FastAPI-based REST interface:
-
-* `POST /predict` → Route traffic and return prediction
-* `POST /outcomes` → Record delayed outcomes
-* `GET /results` → Retrieve statistical evidence
-* `GET /health` → System health check
-
-Interactive docs available at:
-
-```
-/api/v1/docs
-```
-
----
-
-## Quickstart
-
-### 1️⃣ Setup Environment
+## 1. Setup Environment
 
 ```bash
 python -m venv venv
@@ -180,13 +163,115 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2️⃣ Run Tests
+---
+
+## 2. Start the API Server
+
+```bash
+uvicorn src.api.main:app --reload
+```
+
+Server runs at:
+
+```
+http://127.0.0.1:8000
+```
+
+Interactive API docs:
+
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+# Example API Usage
+
+## Create Experiment
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/experiments \
+-H "Content-Type: application/json" \
+-d '{
+  "experiment_id": "rec_model_test",
+  "model_a_id": "baseline_model",
+  "model_b_id": "candidate_model",
+  "probability_split": 0.5,
+  "metric_type": "continuous",
+  "confidence_level": 0.95
+}'
+```
+
+---
+
+## Send Prediction
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/predict \
+-H "Content-Type: application/json" \
+-d '{
+  "experiment_id": "rec_model_test",
+  "features": {"x": 10}
+}'
+```
+
+Example response
+
+```json
+{
+  "request_id": "abc123",
+  "prediction": 0.73,
+  "model_variant": "A",
+  "timestamp": "2026-03-05T12:30:00Z"
+}
+```
+
+---
+
+## Report Outcome
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/outcomes \
+-H "Content-Type: application/json" \
+-d '{
+  "request_id": "REQUEST_ID_HERE",
+  "value": 1
+}'
+```
+
+---
+
+## Get Experiment Results
+
+```bash
+curl http://127.0.0.1:8000/api/v1/experiments/rec_model_test/results
+```
+
+---
+
+## System Monitoring
+
+Metrics endpoint:
+
+```
+GET /metrics
+```
+
+Health check:
+
+```
+GET /health
+```
+
+---
+
+# Running Tests
 
 ```bash
 pytest
 ```
 
-All tests validate:
+Tests validate:
 
 * Routing behavior
 * Statistical correctness
@@ -194,60 +279,39 @@ All tests validate:
 
 ---
 
-## Example Usage
-
-```python
-from src.core import ABTestFramework
-
-framework = ABTestFramework()
-
-# Register models
-framework.register_models(model_a, model_b)
-
-# Route traffic
-prediction, request_id = framework.route_request(
-    X=data,
-    probability_split=0.5
-)
-
-# Record delayed outcome
-framework.record_delayed_outcome(request_id, outcome=1.0)
-
-# Compile evidence
-results = framework.compile_evidence()
-print(results)
-```
-
----
-
-## Roadmap
+# Roadmap
 
 ✔ Core routing engine
 ✔ Statistical computation module
 ✔ Storage abstraction
-✔ FastAPI layer
-🔄 Database persistence
-⬜ Deterministic routing via hashing
+✔ FastAPI API layer
+✔ Structured logging & monitoring
+✔ Metrics endpoint
+
+Next milestones:
+
+⬜ Deterministic traffic assignment (hash-based)
 ⬜ Multi-experiment support
-⬜ Public deployment
+⬜ Dockerized deployment
+⬜ Public cloud deployment
 
 ---
 
-## Deployment Vision
+# Deployment Vision
 
 KRISIS is designed to evolve into:
 
 * Horizontally scalable API service
-* PostgreSQL-backed experimentation system
+* PostgreSQL-backed experimentation infrastructure
 * Containerized production deployment
 * Experiment lifecycle management
 * Evidence reporting with stability signals
 
-This is infrastructure — not a notebook experiment.
+This project is intended to represent **real experimentation infrastructure**, not a notebook prototype.
 
 ---
 
-## The Philosophy
+# Philosophy
 
 Machine learning systems fail silently in production.
 
@@ -262,7 +326,7 @@ Evidence over intuition.
 
 ---
 
-## 📜 License
+## License
 
 MIT License
 

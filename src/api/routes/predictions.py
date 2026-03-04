@@ -10,7 +10,12 @@ from src.core import ABTestFramework
 router = APIRouter()
 
 
-@router.post("/predict", response_model=PredictionResponse)
+@router.post(
+    "/predict",
+    response_model=PredictionResponse,
+    summary="Route prediction through experiment",
+    description="Routes an incoming request to one of the experiment's model variants and logs the request for later outcome analysis.",
+)
 async def predict(
     request: PredictionRequest, framework: ABTestFramework = Depends(get_framework)
 ):
@@ -32,7 +37,11 @@ async def predict(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/outcomes")
+@router.post(
+    "/outcomes",
+    summary="Report outcome",
+    description="Submit the real-world outcome of a previously logged prediction using its request_id.",
+)
 async def report_outcome(
     request: OutcomeReportRequest, framework: ABTestFramework = Depends(get_framework)
 ):

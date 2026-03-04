@@ -32,11 +32,28 @@ class PredictionRequest(BaseModel):
     features: Dict[str, Any]
     metadata: Optional[Dict[str, Any]] = None
 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "experiment_id": "rec_model_test",
+                "features": {"user_id": "123", "item_id": "456"},
+                "metadata": {"user_segment": "premium"},
+            }
+        }
+
 
 class OutcomeReportRequest(BaseModel):
     request_id: UUID
     value: float = Field(..., description="Outcome value", allow_inf_nan=False)
     timestamp: Optional[datetime] = None  # ISO format, auto if not provided
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "request_id": "550e8400-e29b-41d4-a716-446655440000",
+                "value": 1.0,
+            }
+        }
 
 
 class ExperimentUpdateRequest(BaseModel):

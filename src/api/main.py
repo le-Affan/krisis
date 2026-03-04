@@ -11,6 +11,8 @@ from src.logging_config import setup_logging
 
 settings = get_settings()
 
+START_TIME = time.time()
+
 app = FastAPI(
     title="A/B Testing Framework for Machine Learning Models",
     description="Production grade experimentation system for your models",
@@ -91,4 +93,5 @@ async def metrics(framework=Depends(get_framework)):
         "total_experiments": framework.storage.get_experiment_count(),
         "total_requests": framework.storage.get_request_count(),
         "total_outcomes": framework.storage.get_outcome_count(),
+        "uptime_seconds": round(time.time() - START_TIME, 2),
     }

@@ -54,8 +54,23 @@ app.add_middleware(
 
 # Dependency injection for framework instance
 # When an endpoint needs the framework, create one and give it.
+framework = ABTestFramework()
+
+
+def model_a(x):
+    return x["x"] + 1
+
+
+def model_b(x):
+    return x["x"] * 2
+
+
+framework.register_models(model_a, model_b)
+
+
 def get_framework():
-    return ABTestFramework()  # Create singleton or per-request instance
+    return framework
+    # Create singleton or per-request instance
 
 
 @app.get("/health")

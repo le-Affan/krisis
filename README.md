@@ -279,24 +279,6 @@ Tests validate:
 
 ---
 
-# Roadmap
-
-✔ Core routing engine
-✔ Statistical computation module
-✔ Storage abstraction
-✔ FastAPI API layer
-✔ Structured logging & monitoring
-✔ Metrics endpoint
-
-Next milestones:
-
-⬜ Deterministic traffic assignment (hash-based)
-⬜ Multi-experiment support
-⬜ Dockerized deployment
-⬜ Public cloud deployment
-
----
-
 # Deployment Vision
 
 KRISIS is designed to evolve into:
@@ -323,12 +305,6 @@ Randomization.
 Attribution.
 Statistical uncertainty.
 Evidence over intuition.
-
----
-
-## License
-
-MIT License
 
 ---
 

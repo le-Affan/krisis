@@ -4,6 +4,7 @@ import time
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.config import get_settings
 from src.core import ABTestFramework
@@ -19,6 +20,7 @@ app = FastAPI(
     version="1.0",
 )
 
+Instrumentator().instrument(app).expose(app)
 
 setup_logging()
 

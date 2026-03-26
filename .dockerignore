@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+*.db
+*.db-journal
+.env
+.git
+.gitignore
+*.md
+tests/
+.pytest_cac

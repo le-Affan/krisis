@@ -13,6 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY alembic.ini .
 COPY migrations/ ./migrations/
+COPY scripts/ ./scripts/
+RUN chmod +x scripts/init_db.sh
 # Create non-root user
 RUN useradd -m -u 1000 abtest && chown -R abtest:abtest /app
 USER abtest

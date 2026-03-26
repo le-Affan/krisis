@@ -6,7 +6,7 @@ import uuid
 from typing import Optional
 
 from src.config import get_settings
-from src.database import get_engine, get_session_factory, init_db
+from src.database import get_engine, get_session_factory
 from src.models import Model, ModelVariant, Outcome, Request
 from src.statistics import compute_statistics
 from src.storage import DatabaseStorage, InMemoryStorage, StorageBackend
@@ -20,7 +20,9 @@ class ABTestFramework:
                 self.storage = InMemoryStorage()
             else:
                 engine = get_engine(settings.database_url)
-                init_db(engine)
+                # NOTE: Do NOT call init_db / Base.metadata.create_all here.
+                # Schema is exclusively managed by Alembic migrations.
+                # Run: alembic upgrade head  (before starting the app)
                 session_factory = get_session_factory(engine)
                 self.storage = DatabaseStorage(session_factory)
         else:

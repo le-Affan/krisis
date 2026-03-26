@@ -34,3 +34,11 @@ env/
 
 # Alembic compiled files
 migrations/__pycache__/
+
+# Production secrets
+.env.prod
+nginx/ssl/*.pem
+nginx/ssl/*.crt
+nginx/ssl/*.key
+backups/*
+!backups/.gitkeep

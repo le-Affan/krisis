@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: abtest
-      POSTGRES_PASSWORD: abtest_password
-      POSTGRES_DB: abtest
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U abtest"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -19,18 +19,41 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
-      DATABASE_URL: postgresql://abtest:abtest_password@db:5432/abtest
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       STORAGE_BACKEND: database
       DEBUG: "false"
     depends_on:
       db:
         condition: service_healthy
+    restart: always
     entrypoint: ["/bin/bash", "-c"]
     command:
       - "scripts/init_db.sh && gunicorn src.api.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile - --error-logfile -"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      # - "443:443"  # Uncomment when SSL certs are placed in nginx/ssl/
+    volumes:
+      # HTTP-only until SSL certs are provisioned:
+      - ./nginx/nginx.nossl.conf:/etc/nginx/conf.d/default.conf:ro
+      # Swap to the following two lines when certs are in nginx/ssl/:
+      # - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: always
 
 volumes:
-  postgres_prod_data:
+  postgres_data:

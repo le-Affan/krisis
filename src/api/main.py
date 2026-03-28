@@ -1,4 +1,5 @@
 import logging
+import subprocess
 import time
 
 from fastapi import Depends, FastAPI, Request
@@ -19,6 +20,17 @@ app = FastAPI(
     description="Production grade experimentation system for your models",
     version="1.0",
 )
+
+
+@app.on_event("startup")
+def run_migrations():
+    """Run Alembic migrations before serving any requests.
+
+    check=True ensures the process exits with an error if the migration
+    fails — uvicorn will not finish starting up and no requests will be
+    served against an uninitialised schema.
+    """
+    subprocess.run(["alembic", "upgrade", "head"], check=True)
 
 Instrumentator().instrument(app).expose(app)
 

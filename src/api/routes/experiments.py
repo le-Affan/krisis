@@ -21,10 +21,15 @@ async def create_experiment(request: ExperimentCreateRequest):
         session = session_factory()
 
         try:
-            # Check if experiment already exists
             existing = session.get(DBExperiments, request.experiment_id)
             if existing:
                 raise HTTPException(status_code=409, detail="Experiment already exists")
+
+            from src.db_models import DBModel
+            for m_id in [request.model_a_id, request.model_b_id]:
+                if not session.get(DBModel, m_id):
+                    session.add(DBModel(model_id=m_id, adapter_type="internal", location="internal"))
+            session.flush()
 
             db_experiment = DBExperiments(
                 experiment_id=request.experiment_id,
@@ -57,6 +62,8 @@ async def create_experiment(request: ExperimentCreateRequest):
         raise
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

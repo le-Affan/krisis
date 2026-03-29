@@ -22,18 +22,22 @@ async def predict(
     """Route a prediction request through the experiment"""
     try:
         # Extract features and call route_request
-        prediction, request_id = framework.route_request(
+        prediction, request_id, variant = framework.route_request(
             request.features,
             probability_split=0.5,  # Get from experiment config
+            experiment_id=request.experiment_id,
         )
 
         return PredictionResponse(
             request_id=request_id,
             prediction=prediction,
-            model_variant="A",  # Return actual variant
+            model_variant=variant,  # Return actual variant
             timestamp=datetime.utcnow().isoformat(),
         )
     except Exception as e:
+        import traceback
+        print("PREDICT ERROR:", str(e))
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

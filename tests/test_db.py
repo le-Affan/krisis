@@ -100,7 +100,7 @@ def test_save_outcome_and_filter_by_variant(tmp_path):
 def test_route_request_works_with_both_backends(framework):
     framework.register_models(lambda x: x + 1, lambda x: x * 2)
 
-    prediction, request_id = framework.route_request(5, 0.5)
+    prediction, request_id, _ = framework.route_request(5, 0.5)
 
     assert request_id is not None
     assert prediction in [6, 10]
@@ -111,12 +111,12 @@ def test_outcome_storage_and_retrieval(framework):
 
     # Force A
     for _ in range(2):
-        _, request_id = framework.route_request(1, 1.0)
+        _, request_id, _ = framework.route_request(1, 1.0)
         framework.record_delayed_outcome(request_id, 1.0)
 
     # Force B
     for _ in range(2):
-        _, request_id = framework.route_request(1, 0.0)
+        _, request_id, _ = framework.route_request(1, 0.0)
         framework.record_delayed_outcome(request_id, 0.0)
 
     result = framework.compile_evidence()
@@ -128,7 +128,7 @@ def test_multiple_requests(framework):
     framework.register_models(lambda x: x, lambda x: x)
 
     for _ in range(10):
-        _, request_id = framework.route_request(1, 0.5)
+        _, request_id, _ = framework.route_request(1, 0.5)
         framework.record_delayed_outcome(request_id, 1.0)
 
     result = framework.compile_evidence()

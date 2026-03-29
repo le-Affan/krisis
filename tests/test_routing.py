@@ -18,7 +18,7 @@ def test_assignment_distribution_approximately_balanced(framework):
     request_ids = []
 
     for _ in range(total_requests):
-        _, request_id = framework.route_request(1, probability_split)
+        _, request_id, _ = framework.route_request(1, probability_split)
         request_ids.append(request_id)
 
     count_a = 0

@@ -48,7 +48,7 @@ class ABTestFramework:
         self.models["B"] = Model(model_id="B", callable=model_b)
 
     # request routing function
-    def route_request(self, X, probability_split):
+    def route_request(self, X, probability_split, experiment_id="default"):
         """
         Route an incoming request to one of the registered model variants.
 
@@ -60,8 +60,8 @@ class ABTestFramework:
 
         Returns:
         tuple
-            (prediction, request_id) where prediction is the model output
-            and request_id uniquely identifies the routed request.
+            (prediction, request_id, variant) where prediction is the model output,
+            request_id uniquely identifies the routed request, and variant is "A" or "B".
 
         Behavior:
         - Randomly assigns the request to model A or B based on probability_split.
@@ -84,13 +84,14 @@ class ABTestFramework:
             selected_model=variant,
             input_data=X,
             timestamp=timestamp,
+            experiment_id=experiment_id,
         )
         self.storage.save_request(request_object)
 
         # Get prediction
         prediction = self.models[variant.value].callable(X)
 
-        return prediction, request_id
+        return prediction, request_id, variant.value
 
     # function to record the delayed outcome
     def record_delayed_outcome(self, request_id, outcome):
@@ -124,7 +125,7 @@ class ABTestFramework:
         # outcomes[request_id] = outcome
 
     # function to compile all evidence
-    def compile_evidence(self):
+    def compile_evidence(self, experiment_id: str = None):
         """
         Aggregate recorded outcomes and produce a human-readable summary of
         statistical evidence for the A/B experiment.
@@ -151,8 +152,8 @@ class ABTestFramework:
         - Requests and outcomes stores are consistent and in sync.
         - Outcomes are numeric and comparable across variants.
         """
-        outcomes_A = self.storage.get_outcomes_by_variant(ModelVariant.A)
-        outcomes_B = self.storage.get_outcomes_by_variant(ModelVariant.B)
+        outcomes_A = self.storage.get_outcomes_by_variant(ModelVariant.A, experiment_id)
+        outcomes_B = self.storage.get_outcomes_by_variant(ModelVariant.B, experiment_id)
 
         stats_result = compute_statistics(outcomes_A, outcomes_B)
         if stats_result is None:

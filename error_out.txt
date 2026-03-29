@@ -1,0 +1,7 @@
+PREDICT ERROR: (psycopg2.errors.ForeignKeyViolation) insert or update on table "requests" violates foreign key constraint "requests_experiment_id_fkey"
+DETAIL:  Key (experiment_id)=(exp1) is not present in table "experiments".
+
+[SQL: INSERT INTO requests (request_id, experiment_id, model_variant, timestamp) VALUES (%(request_id)s, %(experiment_id)s, %(model_variant)s, %(timestamp)s)]
+[parameters: {'request_id': 'c102eb9e-1b6b-4c8e-b118-ce1e00f761b5', 'experiment_id': 'exp1', 'model_variant': 'A', 'timestamp': datetime.datetime(2026, 3, 29, 21, 48, 6, 724128)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+INFO:     172.18.0.1:48382 - "POST /api/v1/predict HTTP/1.1" 500 Internal Server Error

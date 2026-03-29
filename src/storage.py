@@ -28,7 +28,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    def get_outcomes_by_variant(self, variant: ModelVariant) -> List[float]:
+    def get_outcomes_by_variant(self, variant: ModelVariant, experiment_id: str = None) -> List[float]:
         pass
 
     @abstractmethod
@@ -63,11 +63,12 @@ class InMemoryStorage(StorageBackend):
     def get_all_outcomes(self) -> Dict[str, Outcome]:
         return self.outcomes
 
-    def get_outcomes_by_variant(self, variant: ModelVariant) -> List[float]:
+    def get_outcomes_by_variant(self, variant: ModelVariant, experiment_id: str = None) -> List[float]:
         res = []
         for request_id, outcome in self.outcomes.items():
             try:
-                if self.requests[request_id].selected_model == variant:
+                req = self.requests[request_id]
+                if req.selected_model == variant and (experiment_id is None or req.experiment_id == experiment_id):
                     res.append(outcome.outcome_value)
             except KeyError:
                 continue
@@ -88,13 +89,22 @@ class DatabaseStorage(StorageBackend):
     def __init__(self, session_factory):
         self.session_factory = session_factory
 
+    def _get_or_create_experiment(self, session, experiment_id: str):
+        exp = session.query(DBExperiments).filter(DBExperiments.experiment_id == experiment_id).first()
+        if not exp:
+            exp = DBExperiments(experiment_id=experiment_id)
+            session.add(exp)
+            session.flush()
+
     def save_request(self, request: Request) -> None:
         session = self.session_factory()
 
         try:
+            self._get_or_create_experiment(session, request.experiment_id)
+
             db_request = DBRequest(
                 request_id=request.request_id,
-                experiment_id="default",
+                experiment_id=request.experiment_id,
                 model_variant=request.selected_model.value,
                 timestamp=datetime.fromtimestamp(request.timestamp),
             )
@@ -134,6 +144,7 @@ class DatabaseStorage(StorageBackend):
                 selected_model=ModelVariant(db_request.model_variant),
                 input_data=None,  # Not persisted in DB
                 timestamp=db_request.timestamp.timestamp(),
+                experiment_id=db_request.experiment_id,
             )
         finally:
             session.close()
@@ -155,16 +166,18 @@ class DatabaseStorage(StorageBackend):
         finally:
             session.close()
 
-    def get_outcomes_by_variant(self, variant: ModelVariant) -> List[float]:
+    def get_outcomes_by_variant(self, variant: ModelVariant, experiment_id: str = None) -> List[float]:
         session = self.session_factory()
         try:
             # Join requests and outcomes to filter by variant
-            results = (
+            query = (
                 session.query(DBOutcome.value)
                 .join(DBRequest, DBRequest.request_id == DBOutcome.request_id)
                 .filter(DBRequest.model_variant == variant.value)
-                .all()
             )
+            if experiment_id:
+                query = query.filter(DBRequest.experiment_id == experiment_id)
+            results = query.all()
             return [r[0] for r in results]
         finally:
             session.close()

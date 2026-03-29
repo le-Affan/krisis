@@ -21,6 +21,7 @@ class Request:
     selected_model: ModelVariant
     input_data: Any
     timestamp: float
+    experiment_id: str = "default"
 
 
 @dataclass

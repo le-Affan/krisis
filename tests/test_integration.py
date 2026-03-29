@@ -12,7 +12,7 @@ def test_system_integrates_end_to_end(framework):
     # 2. Route some requests
     request_ids = []
     for _ in range(20):
-        _, req_id = framework.route_request(1, probability_split=0.5)
+        _, req_id, _ = framework.route_request(1, probability_split=0.5)
         request_ids.append(req_id)
 
     # 3. Record outcomes for all requests

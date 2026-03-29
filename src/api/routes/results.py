@@ -13,7 +13,7 @@ async def get_results(
 ):
     """Get current statistical results for an experiment"""
     try:
-        evidence = framework.compile_evidence()
+        evidence = framework.compile_evidence(experiment_id=experiment_id)
         if evidence == "Not enough data to compute statistics.":
             raise HTTPException(status_code=400, detail=evidence)
         return StatisticalResults(

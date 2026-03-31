@@ -4,7 +4,37 @@
 - Docker + Docker Compose installed
 - `.env.prod` file in project root (see `.env.example`)
 
-## Start Production Stack
+## Quick Start (Recommended)
+
+Use the all-in-one startup script to validate, build, and launch everything:
+
+```bash
+# Windows (CMD / PowerShell)
+scripts\startup.bat
+
+# Linux / macOS / Git Bash
+./scripts/startup.sh
+
+# Development mode
+./scripts/startup.sh --dev
+
+# Production + monitoring (Prometheus & Grafana)
+./scripts/startup.sh --monitoring
+
+# Force rebuild images
+./scripts/startup.sh --rebuild
+
+# Graceful shutdown
+./scripts/startup.sh --down
+
+# Shutdown + delete DB volumes
+./scripts/startup.sh --down --purge
+```
+
+The script handles preflight checks, Docker builds, health-check polling, and prints
+a status summary with access URLs when everything is ready.
+
+## Start Production Stack (manual)
 
 ```bash
 docker-compose -f docker-compose.prod.yml --env-file .env.prod up --build -d

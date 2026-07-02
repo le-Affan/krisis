@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel
 
@@ -26,6 +26,13 @@ class HealthCheckResponse(BaseModel):
     status: str
     version: str
     storage_backend: str
+
+
+class ModelResponse(BaseModel):
+    model_id: str
+    adapter_type: str
+    location: str
+    metadata: Dict[str, Any] = {}
 
 
 class ExperimentResponse(BaseModel):

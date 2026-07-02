@@ -132,13 +132,40 @@ KRISIS/
 └── README.md
 ```
 
-> **Known limitation — model registry is not yet wired to routing.** The
-> `models` table and `POST /api/v1/experiments` accept model IDs, but live
-> routing currently calls two built-in stand-in functions defined in
-> `src/api/main.py` (`model_a`, `model_b`), *not* user-registered models.
-> A dynamic model-registration/dispatch endpoint (`src/api/routes/models.py`)
-> is planned but not implemented. Traffic split, request/outcome logging, and
-> the full statistical pipeline are real and working today.
+### Model Registry
+
+Register a model before referencing it in an experiment:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/models \
+-H "Content-Type: application/json" \
+-d '{
+  "model_id": "baseline_model",
+  "adapter_type": "python_callable",
+  "location": "my_package.models:predict_baseline"
+}'
+```
+
+Two adapter types are supported — nothing else:
+
+* **`http`** — `location` is a URL. Krisis POSTs the input `features` as
+  JSON to it and expects back JSON containing a `"prediction"` field, e.g.
+  `{"prediction": 0.73}`. 5s timeout. Safe for any deployment, including
+  ones reachable by untrusted users.
+* **`python_callable`** — `location` is `"module.path:function_name"`,
+  importable in the **same Python environment running Krisis**. The
+  function is called directly with the features dict.
+  **Security: this executes local code with no sandboxing. Only use it for
+  local/single-user development. Never register a `python_callable` model
+  on a Krisis deployment reachable by untrusted users** — see
+  `DEPLOYMENT.md` → Security Considerations.
+
+`python_callable` is validated at registration time (the import is
+resolved immediately, so a bad module/function path fails with a 400
+instead of surfacing later at prediction time). `POST /api/v1/experiments`
+requires both `model_a_id` and `model_b_id` to already be registered — it
+returns 400 otherwise. There are no hardcoded model stand-ins; every
+prediction is routed to a real registered model.
 
 ### Design Principles
 

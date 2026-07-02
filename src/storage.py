@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import func
 
-from src.db_models import DBExperiments, DBOutcome, DBRequest
+from src.db_models import DBExperiments, DBModel, DBOutcome, DBRequest
 from src.models import ModelVariant, Outcome, Request
 
 
@@ -40,6 +40,27 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
+    def save_model(self, model_id: str, adapter_type: str, location: str, metadata: dict = None) -> None:
+        """Register a new model. Raises ValueError if model_id already exists."""
+        pass
+
+    @abstractmethod
+    def get_model(self, model_id: str) -> Optional[dict]:
+        """Return {"model_id", "adapter_type", "location", "metadata"} or None."""
+        pass
+
+    @abstractmethod
+    def list_models(self) -> List[dict]:
+        pass
+
+    @abstractmethod
+    def get_experiment_models(self, experiment_id: str) -> Optional[Tuple[str, str]]:
+        """Return (model_a_id, model_b_id) for the experiment, or None if the
+        experiment isn't found (or, for backends that don't persist experiment
+        configs, isn't trackable)."""
+        pass
+
+    @abstractmethod
     def get_outcome_events(self, experiment_id: str) -> List[dict]:
         """Return outcome events for an experiment as a list of
         {"timestamp": float, "variant": str, "value": float}, for time-series
@@ -63,6 +84,7 @@ class InMemoryStorage(StorageBackend):
     def __init__(self):
         self.requests: Dict[str, Request] = {}
         self.outcomes: Dict[str, Outcome] = {}
+        self.model_registry: Dict[str, dict] = {}
 
     def save_request(self, request) -> None:
         self.requests[request.request_id] = request
@@ -101,6 +123,26 @@ class InMemoryStorage(StorageBackend):
             ):
                 count += 1
         return count
+
+    def save_model(self, model_id: str, adapter_type: str, location: str, metadata: dict = None) -> None:
+        if model_id in self.model_registry:
+            raise ValueError(f"Model '{model_id}' already registered.")
+        self.model_registry[model_id] = {
+            "model_id": model_id,
+            "adapter_type": adapter_type,
+            "location": location,
+            "metadata": metadata or {},
+        }
+
+    def get_model(self, model_id: str) -> Optional[dict]:
+        return self.model_registry.get(model_id)
+
+    def list_models(self) -> List[dict]:
+        return list(self.model_registry.values())
+
+    def get_experiment_models(self, experiment_id: str) -> Optional[Tuple[str, str]]:
+        # In-memory storage does not persist experiment configs.
+        return None
 
     def get_outcome_events(self, experiment_id: str) -> List[dict]:
         events = []
@@ -270,6 +312,63 @@ class DatabaseStorage(StorageBackend):
                 }
                 for ts, variant, value in rows
             ]
+        finally:
+            session.close()
+
+    def save_model(self, model_id: str, adapter_type: str, location: str, metadata: dict = None) -> None:
+        session = self.session_factory()
+        try:
+            if session.get(DBModel, model_id):
+                raise ValueError(f"Model '{model_id}' already registered.")
+            db_model = DBModel(
+                model_id=model_id,
+                adapter_type=adapter_type,
+                location=location,
+                model_metadata=metadata or {},
+            )
+            session.add(db_model)
+            session.commit()
+        finally:
+            session.close()
+
+    def get_model(self, model_id: str) -> Optional[dict]:
+        session = self.session_factory()
+        try:
+            m = session.get(DBModel, model_id)
+            if m is None:
+                return None
+            return {
+                "model_id": m.model_id,
+                "adapter_type": m.adapter_type,
+                "location": m.location,
+                "metadata": m.model_metadata or {},
+            }
+        finally:
+            session.close()
+
+    def list_models(self) -> List[dict]:
+        session = self.session_factory()
+        try:
+            models = session.query(DBModel).all()
+            return [
+                {
+                    "model_id": m.model_id,
+                    "adapter_type": m.adapter_type,
+                    "location": m.location,
+                    "metadata": m.model_metadata or {},
+                }
+                for m in models
+            ]
+        finally:
+            session.close()
+
+    def get_experiment_models(self, experiment_id: str) -> Optional[Tuple[str, str]]:
+        session = self.session_factory()
+        try:
+            exp = session.get(DBExperiments, experiment_id)
+            if exp is None:
+                return None
+            return (exp.model_a_id, exp.model_b_id)
         finally:
             session.close()
 

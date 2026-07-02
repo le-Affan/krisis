@@ -127,3 +127,34 @@ docker-compose -f docker-compose.prod.yml down -v
 | GET | `/api/v1/experiments/{experiment_id}/results` | Get statistical results (incl. guardrail warnings) |
 | POST | `/api/v1/sample-size-calculator` | Required sample size for a given effect |
 | GET | `/api/v1/experiments/{experiment_id}/timeseries` | Cumulative stats bucketed over time |
+| POST | `/api/v1/models` | Register a model (`http` or `python_callable` adapter) |
+| GET | `/api/v1/models` | List registered models |
+| GET | `/api/v1/models/{model_id}` | Get one registered model |
+
+## Security Considerations
+
+**The `python_callable` model adapter executes local code with no
+sandboxing.** When a `python_callable` model is invoked, Krisis imports the
+given module and calls the given function directly, in-process, with
+whatever permissions the Krisis process itself has.
+
+- **Never register a `python_callable` model on a Krisis deployment
+  reachable by untrusted users.** Anyone who can reach `POST
+  /api/v1/models` on such a deployment can get Krisis to import and execute
+  arbitrary code already present on that machine's Python path — and if
+  they can also influence what's importable there (e.g. a shared host,
+  writable `PYTHONPATH`, or a compromised dependency), that's a direct path
+  to remote code execution.
+- `python_callable` is intended for **local, single-user development
+  only** — which matches Krisis's current primary use case (one developer
+  testing their own models on their own machine). There is no
+  authentication on any Krisis endpoint by default, so treat
+  `python_callable` as equivalent to giving API access = shell access.
+- The **`http` adapter is the only adapter type safe for a
+  multi-tenant or publicly-reachable deployment.** It only ever sends the
+  input features as JSON to a URL over HTTP(S) — no local code execution.
+- If you must expose Krisis beyond your own machine, either (a) restrict
+  registration to `http`-only models at the network/proxy layer, or (b) put
+  Krisis behind authentication so only trusted operators can call
+  `POST /api/v1/models` at all. Neither is implemented by Krisis itself
+  today — this is a deployment-time responsibility.

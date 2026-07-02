@@ -5,6 +5,7 @@ import time
 import uuid
 from typing import Optional
 
+from src.adapters import invoke_model
 from src.config import get_settings
 from src.database import get_engine, get_session_factory
 from src.models import Model, ModelVariant, Outcome, Request
@@ -32,7 +33,12 @@ class ABTestFramework:
     # model registration function
     def register_models(self, model_a, model_b):
         """
-        Register two model variants for A/B testing.
+        Directly inject variant callables, bypassing the model registry.
+
+        Intended for tests and simple scripted use. Production traffic
+        should instead register real models via POST /api/v1/models and
+        reference them by ID in the experiment config — route_request will
+        resolve those through the registry (see _invoke_variant below).
 
         Parameters:
         model_a : callable
@@ -46,6 +52,31 @@ class ABTestFramework:
         """
         self.models["A"] = Model(model_id="A", callable=model_a)
         self.models["B"] = Model(model_id="B", callable=model_b)
+
+    def _invoke_variant(self, variant: ModelVariant, X, experiment_id: str):
+        """Resolve which callable serves this variant and invoke it.
+
+        If register_models() was used, that direct injection takes priority.
+        Otherwise resolve the experiment's registered model_id from storage
+        and dispatch through the model registry's adapter (http or
+        python_callable). Raises ValueError if the experiment or model isn't
+        found; adapter invocation failures raise ModelInvocationError.
+        """
+        model_key = variant.value
+        if model_key in self.models:
+            return self.models[model_key].callable(X)
+
+        model_ids = self.storage.get_experiment_models(experiment_id)
+        if model_ids is None:
+            raise ValueError(f"Experiment '{experiment_id}' not found.")
+        model_a_id, model_b_id = model_ids
+        model_id = model_a_id if variant == ModelVariant.A else model_b_id
+
+        model_record = self.storage.get_model(model_id)
+        if model_record is None:
+            raise ValueError(f"Model '{model_id}' not found in registry.")
+
+        return invoke_model(model_record["adapter_type"], model_record["location"], X)
 
     # request routing function
     def route_request(self, X, probability_split, experiment_id="default"):
@@ -89,7 +120,7 @@ class ABTestFramework:
         self.storage.save_request(request_object)
 
         # Get prediction
-        prediction = self.models[variant.value].callable(X)
+        prediction = self._invoke_variant(variant, X, experiment_id)
 
         return prediction, request_id, variant.value
 

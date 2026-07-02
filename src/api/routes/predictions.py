@@ -2,6 +2,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from src.adapters import ModelInvocationError
 from src.api.main import get_framework
 from src.api.schemas.requests import OutcomeReportRequest, PredictionRequest
 from src.api.schemas.responses import PredictionResponse
@@ -38,6 +39,14 @@ async def predict(
             model_variant=variant,  # Return actual variant
             timestamp=datetime.utcnow().isoformat(),
         )
+    except ModelInvocationError as e:
+        # The registered model itself failed (unreachable http endpoint, bad
+        # response, or a raised exception in a python_callable). This is a
+        # per-request failure, not a service crash.
+        raise HTTPException(status_code=502, detail=str(e))
+    except ValueError as e:
+        # Experiment or model_id not found.
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         import traceback
         print("PREDICT ERROR:", str(e))

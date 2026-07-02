@@ -1,11 +1,13 @@
 from datetime import datetime
 from typing import cast
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from src.api.main import get_framework
 from src.api.schemas.requests import ExperimentCreateRequest, ExperimentUpdateRequest
 from src.api.schemas.responses import ExperimentResponse
 from src.config import get_settings
+from src.core import ABTestFramework
 from src.database import get_engine, get_session_factory
 from src.db_models import DBExperiments
 
@@ -13,8 +15,20 @@ router = APIRouter()
 
 
 @router.post("/experiments", response_model=ExperimentResponse)
-async def create_experiment(request: ExperimentCreateRequest):
+async def create_experiment(
+    request: ExperimentCreateRequest, framework: ABTestFramework = Depends(get_framework)
+):
     try:
+        for m_id in (request.model_a_id, request.model_b_id):
+            if framework.storage.get_model(m_id) is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Model '{m_id}' is not registered. Register it via "
+                        "POST /api/v1/models first."
+                    ),
+                )
+
         settings = get_settings()
         engine = get_engine(settings.database_url)
         session_factory = get_session_factory(engine)
@@ -24,12 +38,6 @@ async def create_experiment(request: ExperimentCreateRequest):
             existing = session.get(DBExperiments, request.experiment_id)
             if existing:
                 raise HTTPException(status_code=409, detail="Experiment already exists")
-
-            from src.db_models import DBModel
-            for m_id in [request.model_a_id, request.model_b_id]:
-                if not session.get(DBModel, m_id):
-                    session.add(DBModel(model_id=m_id, adapter_type="internal", location="internal"))
-            session.flush()
 
             db_experiment = DBExperiments(
                 experiment_id=request.experiment_id,

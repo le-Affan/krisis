@@ -77,18 +77,10 @@ app.add_middleware(
 
 # Dependency injection for framework instance
 # When an endpoint needs the framework, create one and give it.
+# Models are resolved per-experiment from the registry (see
+# src/api/routes/models.py and ABTestFramework._invoke_variant in
+# src/core.py) — there are no hardcoded model stand-ins.
 framework = ABTestFramework()
-
-
-def model_a(x):
-    return x["x"] + 1
-
-
-def model_b(x):
-    return x["x"] * 2
-
-
-framework.register_models(model_a, model_b)
 
 
 def get_framework():
@@ -105,9 +97,10 @@ async def health_check():
     }
 
 
-from src.api.routes import experiments, predictions, results
+from src.api.routes import experiments, models, predictions, results
 
 # Include routers
+app.include_router(models.router, prefix="/api/v1", tags=["models"])
 app.include_router(experiments.router, prefix="/api/v1", tags=["experiments"])
 app.include_router(predictions.router, prefix="/api/v1", tags=["predictions"])
 app.include_router(results.router, prefix="/api/v1", tags=["results"])

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -36,3 +36,28 @@ class ExperimentResponse(BaseModel):
     metric_type: str
     confidence_level: float
     status: str
+
+
+class SampleSizeResponse(BaseModel):
+    required_sample_size_per_variant: int
+    baseline_rate: float
+    minimum_detectable_effect: float
+    power: float
+    alpha: float
+
+
+class TimeseriesBucket(BaseModel):
+    timestamp: str
+    sample_size_a: int
+    sample_size_b: int
+    mean_a: Optional[float] = None
+    mean_b: Optional[float] = None
+    effect_size: Optional[float] = None
+    ci_lower: Optional[float] = None
+    ci_upper: Optional[float] = None
+
+
+class TimeseriesResponse(BaseModel):
+    experiment_id: str
+    window: str
+    buckets: list[TimeseriesBucket]

@@ -36,6 +36,17 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
+    def get_request_count_by_variant(self, variant: ModelVariant, experiment_id: str = None) -> int:
+        pass
+
+    @abstractmethod
+    def get_outcome_events(self, experiment_id: str) -> List[dict]:
+        """Return outcome events for an experiment as a list of
+        {"timestamp": float, "variant": str, "value": float}, for time-series
+        analysis. Only requests that have a recorded outcome are included."""
+        pass
+
+    @abstractmethod
     def get_experiment_count(self) -> int:
         pass
 
@@ -81,6 +92,31 @@ class InMemoryStorage(StorageBackend):
     def get_probability_split(self, experiment_id: str, default: float = 0.5) -> float:
         # In-memory storage does not persist experiment configs; use the default.
         return default
+
+    def get_request_count_by_variant(self, variant: ModelVariant, experiment_id: str = None) -> int:
+        count = 0
+        for req in self.requests.values():
+            if req.selected_model == variant and (
+                experiment_id is None or req.experiment_id == experiment_id
+            ):
+                count += 1
+        return count
+
+    def get_outcome_events(self, experiment_id: str) -> List[dict]:
+        events = []
+        for request_id, outcome in self.outcomes.items():
+            req = self.requests.get(request_id)
+            if req is None or req.experiment_id != experiment_id:
+                continue
+            events.append(
+                {
+                    "timestamp": outcome.timestamp,
+                    "variant": req.selected_model.value,
+                    "value": outcome.outcome_value,
+                }
+            )
+        events.sort(key=lambda e: e["timestamp"])
+        return events
 
     def get_experiment_count(self) -> int:
         # In-memory storage does not track experiments
@@ -199,6 +235,41 @@ class DatabaseStorage(StorageBackend):
                 .scalar()
             )
             return split if split is not None else default
+        finally:
+            session.close()
+
+    def get_request_count_by_variant(self, variant: ModelVariant, experiment_id: str = None) -> int:
+        session = self.session_factory()
+        try:
+            query = session.query(func.count(DBRequest.request_id)).filter(
+                DBRequest.model_variant == variant.value
+            )
+            if experiment_id:
+                query = query.filter(DBRequest.experiment_id == experiment_id)
+            return query.scalar() or 0
+        finally:
+            session.close()
+
+    def get_outcome_events(self, experiment_id: str) -> List[dict]:
+        session = self.session_factory()
+        try:
+            rows = (
+                session.query(
+                    DBOutcome.timestamp, DBRequest.model_variant, DBOutcome.value
+                )
+                .join(DBRequest, DBRequest.request_id == DBOutcome.request_id)
+                .filter(DBRequest.experiment_id == experiment_id)
+                .order_by(DBOutcome.timestamp)
+                .all()
+            )
+            return [
+                {
+                    "timestamp": ts.timestamp(),
+                    "variant": variant,
+                    "value": value,
+                }
+                for ts, variant, value in rows
+            ]
         finally:
             session.close()
 

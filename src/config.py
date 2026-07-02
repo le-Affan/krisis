@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     # Statistics
     default_confidence_level: float = 0.95
     minimum_sample_size: int = 2
+    # Guardrail: recommended minimum outcomes per variant before results are trusted.
+    min_recommended_sample_size: int = 100
 
     # Storage
     storage_backend: str = "database"  # "memory" or "database"

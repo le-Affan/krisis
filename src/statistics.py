@@ -1,6 +1,8 @@
+import math
+from typing import List
+
 import numpy as np
 from scipy import stats
-import math
 
 
 def check_minimum_sample_size(n_A, n_B, min_size):
@@ -210,3 +212,95 @@ def compute_statistics(outcomes_1, outcomes_2):
         "n_B": n_B,
         "effect_size": effect_size,
     }
+
+
+def compute_guardrail_warnings(
+    outcomes_A,
+    outcomes_B,
+    configured_split: float,
+    count_A: int,
+    count_B: int,
+    min_sample: int = 100,
+) -> List[str]:
+    """Produce human-readable guardrail warnings for an experiment's results.
+
+    Parameters:
+    outcomes_A, outcomes_B : list of numeric outcome values per variant.
+    configured_split : float
+        The experiment's configured probability of routing to variant A.
+    count_A, count_B : int
+        Number of *requests assigned* to each variant (for imbalance check).
+    min_sample : int
+        Recommended minimum outcomes per variant.
+
+    Returns a (possibly empty) list of warning strings. Checks:
+    a. Insufficient sample size (n < min_sample for either variant).
+    b. Assignment imbalance (observed split deviates > 10 pp from configured).
+    c. High variance (pooled std > 2 * |mean_A - mean_B|).
+    """
+    warnings: List[str] = []
+
+    n_A = len(outcomes_A)
+    n_B = len(outcomes_B)
+
+    # a. Insufficient sample size
+    if n_A < min_sample or n_B < min_sample:
+        warnings.append(
+            f"Sample size below recommended minimum ({min_sample} per variant): "
+            f"A={n_A}, B={n_B}"
+        )
+
+    # b. Assignment imbalance (based on assigned requests, not outcomes)
+    total_assigned = count_A + count_B
+    if total_assigned > 0:
+        observed_split = count_A / total_assigned
+        if abs(observed_split - configured_split) > 0.10:
+            warnings.append(
+                "Assignment imbalance: observed A split "
+                f"{round(observed_split * 100, 1)}% vs configured "
+                f"{round(configured_split * 100, 1)}% "
+                "(>10 percentage points)"
+            )
+
+    # c. High variance relative to effect size
+    if n_A >= 2 and n_B >= 2:
+        mean_A, var_A, std_A, _ = calculate_descriptive_statistics(outcomes_A)
+        mean_B, var_B, std_B, _ = calculate_descriptive_statistics(outcomes_B)
+        pooled_var = ((n_A - 1) * std_A**2 + (n_B - 1) * std_B**2) / (n_A + n_B - 2)
+        pooled_std = math.sqrt(pooled_var) if pooled_var > 0 else 0.0
+        effect_magnitude = abs(mean_A - mean_B)
+        if pooled_std > 2 * effect_magnitude:
+            warnings.append(
+                "High variance relative to effect size: pooled std "
+                f"{round(pooled_std, 4)} > 2x observed difference "
+                f"{round(effect_magnitude, 4)}; confidence interval will be wide "
+                "and unreliable"
+            )
+
+    return warnings
+
+
+def required_sample_size_two_proportions(
+    baseline_rate: float,
+    minimum_detectable_effect: float,
+    power: float = 0.8,
+    alpha: float = 0.05,
+) -> int:
+    """Required sample size *per variant* to detect a difference between two
+    proportions, using the standard normal-approximation power formula:
+
+        n = (z_{1-alpha/2} + z_{power})^2 * (p1(1-p1) + p2(1-p2)) / (p2 - p1)^2
+
+    where p1 = baseline_rate and p2 = baseline_rate + minimum_detectable_effect.
+    Returns the ceiling as an int. Caller is responsible for validating inputs.
+    """
+    p1 = baseline_rate
+    p2 = baseline_rate + minimum_detectable_effect
+
+    z_alpha = stats.norm.ppf(1 - alpha / 2)
+    z_beta = stats.norm.ppf(power)
+
+    numerator = (z_alpha + z_beta) ** 2 * (p1 * (1 - p1) + p2 * (1 - p2))
+    denominator = minimum_detectable_effect**2
+
+    return math.ceil(numerator / denominator)

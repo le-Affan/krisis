@@ -58,3 +58,14 @@ class OutcomeReportRequest(BaseModel):
 
 class ExperimentUpdateRequest(BaseModel):
     status: str  # "running", "paused", "completed"
+
+
+class SampleSizeRequest(BaseModel):
+    baseline_rate: float = Field(
+        ..., gt=0, lt=1, description="Baseline conversion rate (0-1)"
+    )
+    minimum_detectable_effect: float = Field(
+        ..., gt=0, lt=1, description="Absolute effect to detect (0-1)"
+    )
+    power: float = Field(0.8, gt=0, lt=1, description="Statistical power (0-1)")
+    alpha: float = Field(0.05, gt=0, lt=1, description="Significance level (0-1)")

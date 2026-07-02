@@ -1,4 +1,5 @@
 import logging
+import os
 import subprocess
 import time
 
@@ -26,11 +27,19 @@ app = FastAPI(
 def run_migrations():
     """Run Alembic migrations before serving any requests.
 
+    The resolved DATABASE_URL from application settings is injected into the
+    subprocess environment so Alembic migrates the *same* database the app
+    connects to — never the postgres fallback baked into alembic.ini.
+
     check=True ensures the process exits with an error if the migration
     fails — uvicorn will not finish starting up and no requests will be
     served against an uninitialised schema.
     """
-    subprocess.run(["alembic", "upgrade", "head"], check=True)
+    subprocess.run(
+        ["alembic", "upgrade", "head"],
+        check=True,
+        env={**os.environ, "DATABASE_URL": settings.database_url},
+    )
 
 Instrumentator().instrument(app).expose(app)
 
@@ -116,8 +125,8 @@ async def value_error_handler(request: Request, exc: ValueError):
     )
 
 
-@app.get("/metrics")
-async def metrics(framework=Depends(get_framework)):
+@app.get("/metrics/app")
+async def app_metrics(framework=Depends(get_framework)):
     return {
         "total_experiments": framework.storage.get_experiment_count(),
         "total_requests": framework.storage.get_request_count(),

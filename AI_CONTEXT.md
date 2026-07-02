@@ -10,13 +10,21 @@ The system reports evidence but does not automatically choose a winner.
 
 ## Core System Flow
 
-1. User registers two models.
-2. User creates an experiment with a traffic split.
-3. Client sends prediction requests to the framework.
-4. Router assigns request to model A or B.
-5. Prediction is logged with request_id.
-6. Later the client reports an outcome for that request.
-7. Statistical engine computes comparison results.
+1. User creates an experiment with a traffic split (model IDs are recorded).
+2. Client sends prediction requests to the framework.
+3. Router assigns request to model A or B using the experiment's split.
+4. Prediction is logged with request_id.
+5. Later the client reports an outcome for that request.
+6. Statistical engine computes comparison results.
+
+## Known Limitation — Model Registry Not Wired
+
+There is **no working model-registration endpoint** and routing does **not**
+call user-supplied models. `POST /api/v1/experiments` records model IDs in the
+`models`/`experiments` tables, but live prediction routing calls two built-in
+stand-in functions in `src/api/main.py` (`model_a`, `model_b`). A dynamic
+registry/dispatch layer (`src/api/routes/models.py`) is planned but not built.
+Do not document or assume a functional model-registration API.
 
 ## Backend Technology
 

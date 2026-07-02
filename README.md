@@ -110,18 +110,35 @@ It provides evidence so humans can make the final decision.
 ```
 KRISIS/
 ├── src/
-│   ├── core.py              # Routing and orchestration
-│   ├── statistics.py        # Statistical computation engine
-│   ├── api/                 # FastAPI layer
-│   ├── storage/             # In-memory and database backends
-│   └── models/              # Data models
+│   ├── core.py              # ABTestFramework: routing + orchestration
+│   ├── statistics.py        # Statistical computation engine (Welch, CI, effect size)
+│   ├── storage.py           # StorageBackend ABC + InMemory & Database backends
+│   ├── models.py            # Dataclass domain models (Model, Request, Outcome, ...)
+│   ├── db_models.py         # SQLAlchemy ORM tables
+│   ├── database.py          # Engine / session factory
+│   ├── config.py            # Pydantic settings
+│   └── api/                 # FastAPI layer (main.py + routes/ + schemas/)
+├── migrations/              # Alembic migrations
 ├── tests/
 │   ├── test_statistics.py
+│   ├── test_known_truth.py
 │   ├── test_routing.py
+│   ├── test_db.py
+│   ├── test_api.py
+│   ├── test_config.py
 │   └── test_integration.py
-├── requirements.txt
+├── requirements.txt         # Runtime dependencies
+├── requirements-dev.txt     # Dev/test tooling (includes -r requirements.txt)
 └── README.md
 ```
+
+> **Known limitation — model registry is not yet wired to routing.** The
+> `models` table and `POST /api/v1/experiments` accept model IDs, but live
+> routing currently calls two built-in stand-in functions defined in
+> `src/api/main.py` (`model_a`, `model_b`), *not* user-registered models.
+> A dynamic model-registration/dispatch endpoint (`src/api/routes/models.py`)
+> is planned but not implemented. Traffic split, request/outcome logging, and
+> the full statistical pipeline are real and working today.
 
 ### Design Principles
 
@@ -160,7 +177,7 @@ KRISIS emphasizes **uncertainty-aware evidence** rather than binary "significanc
 ```bash
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime + test tooling
 ```
 
 ---
@@ -171,6 +188,8 @@ pip install -r requirements.txt
 uvicorn src.api.main:app --reload
 ```
 
+No environment variables required. With defaults, KRISIS uses a local SQLite
+database (`abtest.db`) and runs Alembic migrations automatically on startup.
 Server runs at:
 
 ```
@@ -251,10 +270,16 @@ curl http://127.0.0.1:8000/api/v1/experiments/rec_model_test/results
 
 ## System Monitoring
 
-Metrics endpoint:
+Prometheus scrape endpoint:
 
 ```
 GET /metrics
+```
+
+Application metrics (JSON: experiment/request/outcome counts, uptime):
+
+```
+GET /metrics/app
 ```
 
 Health check:

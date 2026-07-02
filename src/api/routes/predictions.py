@@ -21,10 +21,14 @@ async def predict(
 ):
     """Route a prediction request through the experiment"""
     try:
-        # Extract features and call route_request
+        # Use the experiment's configured traffic split (falls back to 0.5 for
+        # backends/experiments that don't have a persisted config).
+        probability_split = framework.storage.get_probability_split(
+            request.experiment_id
+        )
         prediction, request_id, variant = framework.route_request(
             request.features,
-            probability_split=0.5,  # Get from experiment config
+            probability_split=probability_split,
             experiment_id=request.experiment_id,
         )
 

@@ -84,10 +84,12 @@ docker-compose -f docker-compose.prod.yml down -v
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check |
-| GET | `/metrics` | App-level metrics |
-| GET | `/metrics` (Prometheus) | Prometheus scrape endpoint |
+| GET | `/metrics` | Prometheus scrape endpoint |
+| GET | `/metrics/app` | App-level metrics (JSON: counts + uptime) |
 | POST | `/api/v1/experiments` | Create experiment |
 | GET | `/api/v1/experiments` | List experiments |
+| GET | `/api/v1/experiments/{experiment_id}` | Get one experiment |
+| PATCH | `/api/v1/experiments/{experiment_id}` | Update experiment status |
 | POST | `/api/v1/predict` | Route prediction |
 | POST | `/api/v1/outcomes` | Record outcome |
-| GET | `/api/v1/results/{id}` | Get results |
+| GET | `/api/v1/experiments/{experiment_id}/results` | Get statistical results |

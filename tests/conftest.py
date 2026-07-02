@@ -1,3 +1,11 @@
+import os
+
+# Tests are hermetic by default: use the in-memory backend so a plain `pytest`
+# never touches a real database or requires any env vars. Database-backed
+# behaviour is still exercised by the parametrized `framework` fixture below,
+# which builds its own self-initialized SQLite schema.
+os.environ.setdefault("STORAGE_BACKEND", "memory")
+
 import pytest
 
 from src.core import ABTestFramework

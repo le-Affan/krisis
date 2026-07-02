@@ -32,6 +32,10 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
+    def get_probability_split(self, experiment_id: str, default: float = 0.5) -> float:
+        pass
+
+    @abstractmethod
     def get_experiment_count(self) -> int:
         pass
 
@@ -73,6 +77,10 @@ class InMemoryStorage(StorageBackend):
             except KeyError:
                 continue
         return res
+
+    def get_probability_split(self, experiment_id: str, default: float = 0.5) -> float:
+        # In-memory storage does not persist experiment configs; use the default.
+        return default
 
     def get_experiment_count(self) -> int:
         # In-memory storage does not track experiments
@@ -179,6 +187,18 @@ class DatabaseStorage(StorageBackend):
                 query = query.filter(DBRequest.experiment_id == experiment_id)
             results = query.all()
             return [r[0] for r in results]
+        finally:
+            session.close()
+
+    def get_probability_split(self, experiment_id: str, default: float = 0.5) -> float:
+        session = self.session_factory()
+        try:
+            split = (
+                session.query(DBExperiments.probability_split)
+                .filter(DBExperiments.experiment_id == experiment_id)
+                .scalar()
+            )
+            return split if split is not None else default
         finally:
             session.close()
 

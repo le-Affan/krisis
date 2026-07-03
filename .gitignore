@@ -49,3 +49,14 @@ nginx/ssl/*.crt
 nginx/ssl/*.key
 backups/*
 !backups/.gitkeep
+
+# Demo/simulation run output — regeneratable via scripts/train_models.py +
+# scripts/simulate_traffic.py + scripts/build_report.py. One representative
+# report is committed under results/ as a proof-it-works example; future
+# reruns should not be committed.
+results/traffic_log.csv
+results/*_report_*.json
+results/*_summary_*.txt
+
+# Claude Code local session settings (machine-specific permission cache)
+.claude/

@@ -2,368 +2,151 @@
 
 # ⚔️ KRISIS
 
-### A/B Testing Framework for Machine Learning Systems
+### Online A/B testing for ML models
 
-**Online Evidence. Statistical Rigor. Zero Guesswork.**
-
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)]()
+[![Python](https://img.shields.io/badge/Python-3.11%2F3.12-blue.svg)]()
 [![FastAPI](https://img.shields.io/badge/FastAPI-API%20Layer-009688.svg)]()
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Storage-336791.svg)]()
-[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED.svg)]()
-[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
+[![Tests](https://img.shields.io/badge/tests-74%20passing-brightgreen.svg)]()
+[![Docker](https://img.shields.io/badge/Docker-verified-2496ED.svg)]()
+[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
 </div>
 
 ---
 
-## What Is KRISIS?
+## What is Krisis?
 
-KRISIS is a **production-shaped A/B testing framework for machine learning models**.
+Offline model evaluation lies to you sometimes. A model can look to be better on a test set offline but once it's serving real traffic, because the offline number doesn't account for sampling noise, distribution shift, or how small the actual gap was to begin with.
 
-It routes live traffic between competing model variants, captures delayed real-world outcomes, and computes statistically rigorous evidence, enabling teams to answer one critical question:
+Krisis is a small, self-hosted service that routes live prediction traffic between two model variants, records what each one predicted, collects the real-world outcome for each prediction (often arriving later than the prediction itself), and runs the actual statistics — a Welch's t-test, a 95% confidence interval, an effect size — to tell you whether one model is *really* better, or whether you're looking at noise. It doesn't auto-promote a winner. It gives you the evidence and gets out of the way.
 
-> Does this model actually perform better in production?
+## Proof it works
 
-Most ML evaluation happens offline.
-KRISIS exists to bring **online experimental evidence** into the loop.
+Two independently trained spam classifiers were registered with Krisis and put through a real 50/50 traffic split against the [SMS Spam Collection](https://archive.ics.uci.edu/ml/machine-learning-databases/00228/smsspamcollection.zip) test set — 1008 live `/predict` + `/outcomes` calls over real HTTP against a running Krisis instance. Full walkthrough with raw request/response output: [`results/DEMO_REPORT.md`](results/DEMO_REPORT.md).
 
----
+Offline, Model B (TF-IDF + Logistic Regression) looked marginally *worse* than Model A (keyword-count Naive Bayes) — 98.03% vs 98.30% accuracy on the held-out test set. The online experiment measured it directly:
 
-## Why This Exists
+| | |
+|---|---|
+| sample size (A / B) | 512 / 496 |
+| accuracy (A / B) | 0.9844 / 0.9778 |
+| 95% CI on the difference | **[−0.0234, 0.0103]** — includes zero |
+| guardrail warning | *"High variance relative to effect size... confidence interval will be wide and unreliable"* |
+| `/predict` latency | p50 6.74ms · p95 7.75ms · p99 9.06ms |
 
-Offline metrics lie.
+The CI includes zero and Krisis's own guardrail flags the result as unreliable at this sample size — correctly refusing to call a 0.66pp gap "significant." That's the whole point: catching the difference between a real effect and noise before someone ships a decision on it.
 
-* Distribution shift
-* Proxy targets
-* Noisy labels
-* Delayed outcomes
-* Tiny effect sizes
+## Quickstart
 
-Accuracy improvements in notebooks often disappear in production.
+Two verified paths. Pick one.
 
-KRISIS closes the gap between:
+### Bare uvicorn (SQLite, zero config)
 
-**Offline evaluation → Live traffic → Statistical certainty**
-
----
-
-## Architecture Overview
-
-```
-Client Request
-      ↓
-FastAPI Layer
-      ↓
-Traffic Router
-      ↓
-Model Variant
-      ↓
-Prediction Logger
-      ↓
-Delayed Outcome Ingestion
-      ↓
-Statistical Engine
-      ↓
-Evidence & Confidence Intervals
+```bash
+python -m venv venv && source venv/bin/activate   # Python 3.11 or 3.12
+pip install -r requirements-dev.txt
+uvicorn src.api.main:app --reload
 ```
 
-The system separates:
+No environment variables needed. Migrations run automatically on startup against a local `abtest.db`. Server: `http://127.0.0.1:8000` — interactive docs at `/docs`.
 
-* **Routing logic**
-* **Storage abstraction**
-* **Statistical computation**
-* **API layer orchestration**
+### Docker Compose (Postgres + API)
 
-This ensures clean boundaries and extensibility.
-
----
-
-## Core Capabilities
-
-### Randomized Traffic Routing
-
-* Probabilistic split between model A and B
-* Unique request tracking
-* Variant attribution for every prediction
-
-### Delayed Outcome Attribution
-
-* Outcomes recorded asynchronously
-* Correct linking via unique `request_id`
-* Supports real-world feedback such as conversions, revenue, engagement etc.
-
-### Statistical Engine
-
-* Welch’s t-test (unequal variance)
-* Difference in means (B − A)
-* 95% confidence intervals
-* Effect size reporting
-* Minimum sample guardrails
-
-KRISIS does **not auto-deploy winners**.
-It provides evidence so humans can make the final decision.
-
----
-
-## Current Project Structure
-
-```
-KRISIS/
-├── src/
-│   ├── core.py              # ABTestFramework: routing + orchestration
-│   ├── statistics.py        # Statistical computation engine (Welch, CI, effect size)
-│   ├── storage.py           # StorageBackend ABC + InMemory & Database backends
-│   ├── models.py            # Dataclass domain models (Model, Request, Outcome, ...)
-│   ├── db_models.py         # SQLAlchemy ORM tables
-│   ├── database.py          # Engine / session factory
-│   ├── config.py            # Pydantic settings
-│   └── api/                 # FastAPI layer (main.py + routes/ + schemas/)
-├── migrations/              # Alembic migrations
-├── tests/
-│   ├── test_statistics.py
-│   ├── test_known_truth.py
-│   ├── test_routing.py
-│   ├── test_db.py
-│   ├── test_api.py
-│   ├── test_config.py
-│   └── test_integration.py
-├── requirements.txt         # Runtime dependencies
-├── requirements-dev.txt     # Dev/test tooling (includes -r requirements.txt)
-└── README.md
+```bash
+docker compose up -d --build
+curl http://localhost:8000/health
 ```
 
-### Model Registry
+> **SELinux hosts (Fedora etc.):** if you edit `docker-compose.yml`'s bind mounts, keep the `:z` label on `./src` and `./backups` — without it the container silently can't read the mounted files.
+
+Both paths are verified end-to-end (migration runs, health check passes, a full experiment → predict → outcome → results round trip works). The `docker-compose.prod.yml` / nginx / monitoring stack and `scripts/startup.sh` exist and are documented in `DEPLOYMENT.md`, but have **not** been run end-to-end in this repo's own verification passes — treat as unverified until you've run it yourself.
+
+## Core concepts
+
+- **Experiment** — a comparison between two registered models (`model_a_id`, `model_b_id`) with a configured traffic split.
+- **Variant** — "A" or "B". Each incoming prediction request is randomly assigned one, per the experiment's `probability_split`.
+- **Delayed outcome** — the real-world result of a prediction (did the user convert, was the classification correct, etc.) often isn't known until later. `POST /api/v1/outcomes` links it back to the original prediction via `request_id`.
+- **Guardrail warnings** — `GET .../results` doesn't just report numbers; it flags when the sample size is too small, when traffic assignment has drifted from the configured split, or when variance is too high relative to the observed effect for the CI to mean much.
+- **Confidence interval** — a 95% CI on the difference in means (B − A), via Welch's t-test (no equal-variance assumption). If it includes zero, the difference isn't distinguishable from noise at this sample size.
+
+## API reference
+
+All endpoints below exist in the code today — verified against `src/api/routes/*.py`, not aspirational.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/health` | Health check |
+| GET | `/metrics` | Prometheus scrape endpoint |
+| GET | `/metrics/app` | App metrics (JSON: counts + uptime) |
+| POST | `/api/v1/models` | Register a model (`http` or `python_callable` adapter) |
+| GET | `/api/v1/models` | List registered models |
+| GET | `/api/v1/models/{model_id}` | Get one registered model |
+| POST | `/api/v1/experiments` | Create an experiment (400 if either model isn't registered) |
+| GET | `/api/v1/experiments` | List experiments |
+| GET | `/api/v1/experiments/{experiment_id}` | Get one experiment |
+| PATCH | `/api/v1/experiments/{experiment_id}` | Update experiment status |
+| POST | `/api/v1/predict` | Route a prediction to a variant, log it |
+| POST | `/api/v1/outcomes` | Report the real-world outcome for a prediction |
+| GET | `/api/v1/experiments/{experiment_id}/results` | Statistical results + guardrail warnings |
+| POST | `/api/v1/sample-size-calculator` | Required sample size for a target effect (power analysis) |
+| GET | `/api/v1/experiments/{experiment_id}/timeseries` | Cumulative stats bucketed over time (watch the CI converge) |
+
+## Bring your own models
 
 Register a model before referencing it in an experiment:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/models \
--H "Content-Type: application/json" \
--d '{
-  "model_id": "baseline_model",
-  "adapter_type": "python_callable",
-  "location": "my_package.models:predict_baseline"
-}'
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "baseline", "adapter_type": "python_callable", "location": "my_package.models:predict_fn"}'
 ```
 
-Two adapter types are supported — nothing else:
+Exactly two adapter types, nothing else:
 
-* **`http`** — `location` is a URL. Krisis POSTs the input `features` as
-  JSON to it and expects back JSON containing a `"prediction"` field, e.g.
-  `{"prediction": 0.73}`. 5s timeout. Safe for any deployment, including
-  ones reachable by untrusted users.
-* **`python_callable`** — `location` is `"module.path:function_name"`,
-  importable in the **same Python environment running Krisis**. The
-  function is called directly with the features dict.
-  **Security: this executes local code with no sandboxing. Only use it for
-  local/single-user development. Never register a `python_callable` model
-  on a Krisis deployment reachable by untrusted users** — see
-  `DEPLOYMENT.md` → Security Considerations.
+- **`http`** — `location` is a URL. Krisis POSTs `{"...features"}` as JSON and expects back `{"prediction": ...}`. 5s timeout, clear errors on unreachable/malformed/non-200 responses. Safe for any deployment, including ones reachable by untrusted users.
+- **`python_callable`** — `location` is `"module.path:function_name"`, imported and called in-process. **This executes arbitrary local code with no sandboxing — local/single-user development only. Never register a `python_callable` model on a deployment reachable by untrusted users.** See `DEPLOYMENT.md` → Security Considerations for the full reasoning.
 
-`python_callable` is validated at registration time (the import is
-resolved immediately, so a bad module/function path fails with a 400
-instead of surfacing later at prediction time). `POST /api/v1/experiments`
-requires both `model_a_id` and `model_b_id` to already be registered — it
-returns 400 otherwise. There are no hardcoded model stand-ins; every
-prediction is routed to a real registered model.
+`python_callable` imports are resolved immediately at registration time, so a typo'd module path fails with a 400 there, not later at prediction time. A working example: [`demo/spam_models.py`](demo/spam_models.py), which wraps two real trained scikit-learn models this way.
 
-### Design Principles
-
-* Pure statistical logic isolated from system wiring
-* Storage abstraction (memory → database)
-* Deterministic extension-ready routing
-* API-first architecture
-* Test-driven validation
-
----
-
-## Statistical Methodology
-
-**Metric:** Difference in mean outcomes (B − A)
-
-**Test:** Welch’s t-test (unequal variances)
-
-**Confidence Interval:** Two-sided 95%
-
-**Guardrails:** Minimum outcomes per variant
-
-Edge cases handled:
-
-* Insufficient data
-* Degenerate variance
-* High variance warnings
-
-KRISIS emphasizes **uncertainty-aware evidence** rather than binary "significance" decisions.
-
----
-
-# Running the System
-
-## 1. Setup Environment
+## Reproduce the demo yourself
 
 ```bash
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements-dev.txt   # runtime + test tooling
+pip install -r requirements-demo.txt        # adds scikit-learn, pandas, joblib
+python scripts/train_models.py              # downloads SMS Spam Collection, trains both models, prints real accuracy
+uvicorn src.api.main:app --reload &          # boot Krisis (separate terminal is cleaner)
+# register demo.spam_models:predict_model_a / predict_model_b via POST /api/v1/models,
+# create an experiment referencing them — see results/DEMO_REPORT.md for the exact calls
+python scripts/simulate_traffic.py --n 1000  # replays held-out test examples through /predict + /outcomes
+python scripts/build_report.py               # pulls /results + /timeseries, computes latency percentiles, saves to results/
 ```
 
----
+## Known limitations
 
-## 2. Start the API Server
+- **No authentication on any endpoint.** Anyone who can reach the API can register models, including `python_callable` ones. Don't expose Krisis to untrusted networks without putting authentication in front of it yourself.
+- **`docker-compose.prod.yml` (nginx + monitoring stack) and `scripts/startup.sh` are unverified.** The base `docker-compose.yml` (Postgres + API) and both Dockerfiles are verified working end-to-end; the full production compose stack with nginx/Prometheus/Grafana has not been.
+- **No rate limiting, no multi-tenancy, no experiment-lifecycle automation** (e.g. auto-stopping an experiment once significance is reached) — reporting evidence is the whole scope; decisions are yours.
 
-```bash
-uvicorn src.api.main:app --reload
-```
+## Tech stack & architecture
 
-No environment variables required. With defaults, KRISIS uses a local SQLite
-database (`abtest.db`) and runs Alembic migrations automatically on startup.
-Server runs at:
+Python (FastAPI + Pydantic) · SQLAlchemy + Alembic · SQLite (dev) / PostgreSQL (prod) · NumPy/SciPy for the statistics · Docker + Docker Compose.
 
 ```
-http://127.0.0.1:8000
+client → FastAPI routes → ABTestFramework.route_request()
+                                │
+                    ┌───────────┴───────────┐
+                    │                       │
+            StorageBackend           model registry → adapter (http | python_callable)
+         (InMemory | Database)              │
+                    │                  real model call
+                    └───────────┬───────────┘
+                                │
+                     statistics engine (Welch's t-test, CI, effect size)
+                                │
+                    GET /results, /timeseries
 ```
 
-Interactive API docs:
+`src/statistics.py` and `src/adapters.py` are pure logic with no framework dependencies; `src/storage.py` is the persistence abstraction; `src/api/` is the FastAPI wiring on top. See `tests/` (74 tests, 83% coverage) for what's actually verified.
 
-```
-http://127.0.0.1:8000/docs
-```
+## License
 
----
-
-# Example API Usage
-
-## Create Experiment
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/experiments \
--H "Content-Type: application/json" \
--d '{
-  "experiment_id": "rec_model_test",
-  "model_a_id": "baseline_model",
-  "model_b_id": "candidate_model",
-  "probability_split": 0.5,
-  "metric_type": "continuous",
-  "confidence_level": 0.95
-}'
-```
-
----
-
-## Send Prediction
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/predict \
--H "Content-Type: application/json" \
--d '{
-  "experiment_id": "rec_model_test",
-  "features": {"x": 10}
-}'
-```
-
-Example response
-
-```json
-{
-  "request_id": "abc123",
-  "prediction": 0.73,
-  "model_variant": "A",
-  "timestamp": "2026-03-05T12:30:00Z"
-}
-```
-
----
-
-## Report Outcome
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/outcomes \
--H "Content-Type: application/json" \
--d '{
-  "request_id": "REQUEST_ID_HERE",
-  "value": 1
-}'
-```
-
----
-
-## Get Experiment Results
-
-```bash
-curl http://127.0.0.1:8000/api/v1/experiments/rec_model_test/results
-```
-
----
-
-## System Monitoring
-
-Prometheus scrape endpoint:
-
-```
-GET /metrics
-```
-
-Application metrics (JSON: experiment/request/outcome counts, uptime):
-
-```
-GET /metrics/app
-```
-
-Health check:
-
-```
-GET /health
-```
-
----
-
-# Running Tests
-
-```bash
-pytest
-```
-
-Tests validate:
-
-* Routing behavior
-* Statistical correctness
-* End-to-end system integrity
-
----
-
-# Deployment Vision
-
-KRISIS is designed to evolve into:
-
-* Horizontally scalable API service
-* PostgreSQL-backed experimentation infrastructure
-* Containerized production deployment
-* Experiment lifecycle management
-* Evidence reporting with stability signals
-
-This project is intended to represent **real experimentation infrastructure**, not a notebook prototype.
-
----
-
-# Philosophy
-
-Machine learning systems fail silently in production.
-
-KRISIS introduces a missing discipline:
-
-**Treat model deployment like a scientific experiment.**
-
-Randomization.
-Attribution.
-Statistical uncertainty.
-Evidence over intuition.
-
----
-
-<div align="center">
-
-### KRISIS
-
-**Because shipping models without evidence is gambling.**
-
-</div>
+MIT — see [LICENSE](LICENSE).

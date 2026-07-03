@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from src.api.main import app, get_framework
 from src.core import ABTestFramework
 from src.database import get_engine, get_session_factory, init_db
-from src.storage import DatabaseStorage
+from src.storage import DatabaseStorage, InMemoryStorage
 
 
 @pytest.fixture
@@ -199,3 +199,99 @@ def test_predict_unknown_experiment_returns_404(registry_client):
         "/api/v1/predict", json={"experiment_id": "never_created", "features": {"x": 1}}
     )
     assert resp.status_code == 404
+
+
+# --- STORAGE_BACKEND=memory isolation ---
+# The whole point of the fix: experiments.py used to open its own raw DB
+# session via get_engine(settings.database_url) regardless of which storage
+# backend the framework was configured with. That meant "memory" mode still
+# silently wrote experiment rows to a real database. These tests prove that's
+# no longer true: everything (models, experiments, predict, outcomes) goes
+# through framework.storage now, so an in-memory-backed framework touches
+# zero rows in a real DB it's simultaneously connected to.
+
+
+@pytest.fixture
+def memory_client_with_real_db(tmp_path, monkeypatch):
+    """A framework backed by InMemoryStorage, while DATABASE_URL points at a
+    real, migrated sqlite file we can independently inspect afterward."""
+    db_file = tmp_path / "should_stay_empty.db"
+    db_url = f"sqlite:///{db_file}"
+    monkeypatch.setenv("DATABASE_URL", db_url)
+    monkeypatch.setenv("STORAGE_BACKEND", "memory")
+
+    engine = get_engine(db_url)
+    init_db(engine)  # real, queryable schema — but nothing should ever be written to it
+
+    framework = ABTestFramework(storage_backend=InMemoryStorage())
+    app.dependency_overrides[get_framework] = lambda: framework
+
+    client = TestClient(app)
+    yield client, engine
+
+    app.dependency_overrides.clear()
+
+
+def test_memory_backend_experiment_creation_touches_zero_db_rows(memory_client_with_real_db):
+    client, engine = memory_client_with_real_db
+
+    _register(client, "mem_model_a", "python_callable", "tests.fixture_models:add_one")
+    _register(client, "mem_model_b", "python_callable", "tests.fixture_models:double")
+
+    resp = client.post(
+        "/api/v1/experiments",
+        json={
+            "experiment_id": "memory_only_exp",
+            "model_a_id": "mem_model_a",
+            "model_b_id": "mem_model_b",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["experiment_id"] == "memory_only_exp"
+
+    # the experiment IS visible through the in-memory-backed API...
+    assert client.get("/api/v1/experiments/memory_only_exp").status_code == 200
+    assert len(client.get("/api/v1/experiments").json()) == 1
+
+    # ...but the real, independently-migrated DATABASE_URL sqlite file it was
+    # never supposed to touch has zero rows in every relevant table.
+    with engine.connect() as conn:
+        from sqlalchemy import text
+
+        for table in ("experiments", "models", "requests", "outcomes"):
+            count = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+            assert count == 0, f"expected 0 rows in {table}, found {count}"
+
+
+def test_memory_backend_full_lifecycle_touches_zero_db_rows(memory_client_with_real_db):
+    """Same guarantee across the full predict/outcome/results lifecycle, not
+    just experiment creation."""
+    client, engine = memory_client_with_real_db
+
+    _register(client, "mem_a", "python_callable", "tests.fixture_models:add_one")
+    _register(client, "mem_b", "python_callable", "tests.fixture_models:double")
+    client.post(
+        "/api/v1/experiments",
+        json={
+            "experiment_id": "mem_lifecycle_exp",
+            "model_a_id": "mem_a",
+            "model_b_id": "mem_b",
+            "probability_split": 1.0,
+        },
+    )
+
+    pred = client.post(
+        "/api/v1/predict", json={"experiment_id": "mem_lifecycle_exp", "features": {"x": 5}}
+    )
+    assert pred.status_code == 200
+    request_id = pred.json()["request_id"]
+
+    outcome = client.post("/api/v1/outcomes", json={"request_id": request_id, "value": 1.0})
+    assert outcome.status_code == 200
+
+    with engine.connect() as conn:
+        from sqlalchemy import text
+
+        for table in ("experiments", "models", "requests", "outcomes"):
+            count = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+            assert count == 0, f"expected 0 rows in {table}, found {count}"

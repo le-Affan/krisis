@@ -68,6 +68,37 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
+    def create_experiment(
+        self,
+        experiment_id: str,
+        model_a_id: str,
+        model_b_id: str,
+        probability_split: float,
+        metric_type: str,
+        confidence_level: float,
+    ) -> dict:
+        """Create a new experiment (status starts as "running"). Raises
+        ValueError if experiment_id already exists. Returns the same dict
+        shape as get_experiment."""
+        pass
+
+    @abstractmethod
+    def get_experiment(self, experiment_id: str) -> Optional[dict]:
+        """Return {"experiment_id", "model_a_id", "model_b_id",
+        "probability_split", "metric_type", "confidence_level", "status"}
+        or None."""
+        pass
+
+    @abstractmethod
+    def list_experiments(self) -> List[dict]:
+        pass
+
+    @abstractmethod
+    def update_experiment_status(self, experiment_id: str, status: str) -> Optional[dict]:
+        """Update status and return the updated dict, or None if not found."""
+        pass
+
+    @abstractmethod
     def get_experiment_count(self) -> int:
         pass
 
@@ -85,6 +116,7 @@ class InMemoryStorage(StorageBackend):
         self.requests: Dict[str, Request] = {}
         self.outcomes: Dict[str, Outcome] = {}
         self.model_registry: Dict[str, dict] = {}
+        self.experiments: Dict[str, dict] = {}
 
     def save_request(self, request) -> None:
         self.requests[request.request_id] = request
@@ -112,8 +144,8 @@ class InMemoryStorage(StorageBackend):
         return res
 
     def get_probability_split(self, experiment_id: str, default: float = 0.5) -> float:
-        # In-memory storage does not persist experiment configs; use the default.
-        return default
+        exp = self.experiments.get(experiment_id)
+        return exp["probability_split"] if exp is not None else default
 
     def get_request_count_by_variant(self, variant: ModelVariant, experiment_id: str = None) -> int:
         count = 0
@@ -141,8 +173,46 @@ class InMemoryStorage(StorageBackend):
         return list(self.model_registry.values())
 
     def get_experiment_models(self, experiment_id: str) -> Optional[Tuple[str, str]]:
-        # In-memory storage does not persist experiment configs.
-        return None
+        exp = self.experiments.get(experiment_id)
+        if exp is None:
+            return None
+        return (exp["model_a_id"], exp["model_b_id"])
+
+    def create_experiment(
+        self,
+        experiment_id: str,
+        model_a_id: str,
+        model_b_id: str,
+        probability_split: float,
+        metric_type: str,
+        confidence_level: float,
+    ) -> dict:
+        if experiment_id in self.experiments:
+            raise ValueError(f"Experiment '{experiment_id}' already exists.")
+        exp = {
+            "experiment_id": experiment_id,
+            "model_a_id": model_a_id,
+            "model_b_id": model_b_id,
+            "probability_split": probability_split,
+            "metric_type": metric_type,
+            "confidence_level": confidence_level,
+            "status": "running",
+        }
+        self.experiments[experiment_id] = exp
+        return exp
+
+    def get_experiment(self, experiment_id: str) -> Optional[dict]:
+        return self.experiments.get(experiment_id)
+
+    def list_experiments(self) -> List[dict]:
+        return list(self.experiments.values())
+
+    def update_experiment_status(self, experiment_id: str, status: str) -> Optional[dict]:
+        exp = self.experiments.get(experiment_id)
+        if exp is None:
+            return None
+        exp["status"] = status
+        return exp
 
     def get_outcome_events(self, experiment_id: str) -> List[dict]:
         events = []
@@ -161,8 +231,7 @@ class InMemoryStorage(StorageBackend):
         return events
 
     def get_experiment_count(self) -> int:
-        # In-memory storage does not track experiments
-        return 0
+        return len(self.experiments)
 
     def get_request_count(self) -> int:
         return len(self.requests)
@@ -369,6 +438,77 @@ class DatabaseStorage(StorageBackend):
             if exp is None:
                 return None
             return (exp.model_a_id, exp.model_b_id)
+        finally:
+            session.close()
+
+    @staticmethod
+    def _experiment_to_dict(exp: DBExperiments) -> dict:
+        return {
+            "experiment_id": exp.experiment_id,
+            "model_a_id": exp.model_a_id,
+            "model_b_id": exp.model_b_id,
+            "probability_split": exp.probability_split,
+            "metric_type": exp.metric_type,
+            "confidence_level": exp.confidence_level,
+            "status": exp.status,
+        }
+
+    def create_experiment(
+        self,
+        experiment_id: str,
+        model_a_id: str,
+        model_b_id: str,
+        probability_split: float,
+        metric_type: str,
+        confidence_level: float,
+    ) -> dict:
+        session = self.session_factory()
+        try:
+            if session.get(DBExperiments, experiment_id):
+                raise ValueError(f"Experiment '{experiment_id}' already exists.")
+
+            db_experiment = DBExperiments(
+                experiment_id=experiment_id,
+                model_a_id=model_a_id,
+                model_b_id=model_b_id,
+                probability_split=probability_split,
+                metric_type=metric_type,
+                confidence_level=confidence_level,
+                status="running",
+                created_at=datetime.utcnow(),
+            )
+            session.add(db_experiment)
+            session.commit()
+            return self._experiment_to_dict(db_experiment)
+        finally:
+            session.close()
+
+    def get_experiment(self, experiment_id: str) -> Optional[dict]:
+        session = self.session_factory()
+        try:
+            exp = session.get(DBExperiments, experiment_id)
+            if exp is None:
+                return None
+            return self._experiment_to_dict(exp)
+        finally:
+            session.close()
+
+    def list_experiments(self) -> List[dict]:
+        session = self.session_factory()
+        try:
+            return [self._experiment_to_dict(exp) for exp in session.query(DBExperiments).all()]
+        finally:
+            session.close()
+
+    def update_experiment_status(self, experiment_id: str, status: str) -> Optional[dict]:
+        session = self.session_factory()
+        try:
+            exp = session.get(DBExperiments, experiment_id)
+            if exp is None:
+                return None
+            exp.status = status
+            session.commit()
+            return self._experiment_to_dict(exp)
         finally:
             session.close()
 

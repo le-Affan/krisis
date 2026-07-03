@@ -49,7 +49,6 @@ async def predict(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         import traceback
-        print("PREDICT ERROR:", str(e))
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 

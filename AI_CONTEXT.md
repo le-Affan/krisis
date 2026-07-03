@@ -42,26 +42,28 @@ does not crash the service.
 
 Language: Python
 Framework: FastAPI
-Database: PostgreSQL
+Database: SQLite (dev default, zero-config) or PostgreSQL (prod), via SQLAlchemy + Alembic
 Statistics: NumPy, SciPy
 
-## Important Backend Endpoints
+## Backend Endpoints
 
-Health check
+Full current list — see README.md "API reference" for descriptions:
 
 GET /health
-
-Prediction routing
-
+GET /metrics
+GET /metrics/app
+POST /api/v1/models
+GET /api/v1/models
+GET /api/v1/models/{model_id}
+POST /api/v1/experiments
+GET /api/v1/experiments
+GET /api/v1/experiments/{experiment_id}
+PATCH /api/v1/experiments/{experiment_id}
 POST /api/v1/predict
-
-Report outcome
-
 POST /api/v1/outcomes
-
-Get experiment results
-
 GET /api/v1/experiments/{experiment_id}/results
+POST /api/v1/sample-size-calculator
+GET /api/v1/experiments/{experiment_id}/timeseries
 
 ## Expected Prediction Request
 

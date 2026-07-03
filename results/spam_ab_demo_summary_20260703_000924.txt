@@ -1,0 +1,24 @@
+KRISIS SPAM A/B DEMO — FINAL REPORT
+Generated: 2026-07-03T00:09:24.001236+00:00
+
+DATASET: SMS Spam Collection (UCI), 5572 messages, 4457 train / 1115 test (80/20 stratified)
+
+TRAINING (held-out test set):
+  Model A (keyword-count + MultinomialNB):  accuracy = 0.9830
+  Model B (TF-IDF + LogisticRegression):     accuracy = 0.9803
+  Gap (B - A):                                -0.0027
+
+LIVE EXPERIMENT RESULTS (/api/v1/experiments/spam_ab_demo/results):
+  sample_size_a=512  sample_size_b=496
+  model_a_mean=0.9844  model_b_mean=0.9778
+  difference(B-A)=-0.0066
+  95% CI=[-0.0234, 0.0103]  (excludes zero: False)
+  warnings=['High variance relative to effect size: pooled std 0.1361 > 2x observed difference 0.0066; confidence interval will be wide and unreliable']
+
+TIMESERIES CONVERGENCE:
+  buckets=10
+  first: {'timestamp': '2026-07-03T00:05:58.979263+00:00', 'sample_size_a': 4, 'sample_size_b': 4, 'mean_a': 1.0, 'mean_b': 1.0, 'effect_size': 0.0, 'ci_lower': 0.0, 'ci_upper': 0.0}
+  last:  {'timestamp': '2026-07-03T00:07:55.248199+00:00', 'sample_size_a': 512, 'sample_size_b': 496, 'mean_a': 0.9844, 'mean_b': 0.9778, 'effect_size': -0.0481, 'ci_lower': -0.0234, 'ci_upper': 0.0103}
+
+PREDICT LATENCY (bulk run, n=1000):
+  mean=6.87ms  p50=6.74ms  p95=7.75ms  p99=9.06ms  max=54.42ms

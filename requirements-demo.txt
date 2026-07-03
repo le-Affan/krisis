@@ -1,0 +1,10 @@
+# Extra dependencies for scripts/train_models.py, scripts/simulate_traffic.py,
+# scripts/build_report.py, and demo/spam_models.py — NOT required to run
+# Krisis itself (see requirements.txt for that).
+-r requirements.txt
+
+scikit-learn==1.9.0
+pandas==3.0.3
+joblib==1.5.3
+numpy==1.26.4
+requests==2.34.2

@@ -24,6 +24,7 @@ htmlcov/
 # Logs / data
 *.log
 data/
+models/
 
 # SQLite database files
 *.db
